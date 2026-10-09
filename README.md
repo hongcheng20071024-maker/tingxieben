@@ -10,6 +10,12 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 
 免安装，浏览器打开即用。装到主屏幕后就是一个独立图标 —— 点开全屏、没有地址栏、不联网也能用。
 
+<p align="center">
+  <img src="docs/qrcode.png" alt="扫码打开听写本" width="240">
+  <br>
+  <sub>手机 / iPad 扫码直接打开（也可以截图发给同学）</sub>
+</p>
+
 ---
 
 ## 装到 iPad / iPhone
