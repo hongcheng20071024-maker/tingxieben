@@ -1,0 +1,46 @@
+/* 样式仅作用于纸笔练习新增的草稿区域。 */
+.scratchpad-panel{border:1px solid #dce3f2;border-radius:20px;background:#fff;padding:24px;margin-top:22px;min-width:0;box-shadow:0 8px 30px #18244204;color:#17233d}
+.scratchpad-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+.scratchpad-heading h2{font-size:20px;font-weight:700;margin:0;line-height:1.4}
+.scratchpad-heading p{color:#76829b;font-size:13px;margin:4px 0 0}
+.scratchpad-panel button,.scratchpad-panel select{font:inherit;font-size:13px;min-height:42px;border:1px solid #dce3f2;border-radius:9px;background:#fff;color:#243654;padding:8px 12px;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+.scratchpad-panel button:disabled{opacity:.4;cursor:default}
+.scratchpad-panel button[aria-pressed=true]{background:#edf0ff;border-color:#6676e9;color:#263dd1;font-weight:600}
+.scratchpad-panel button:focus-visible,.scratchpad-panel select:focus-visible,.scratchpad-panel input:focus-visible{outline:3px solid #7b89f2;outline-offset:2px}
+.scratchpad-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.scratchpad-transport{display:flex;align-items:center;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:2;background:#fff;padding:8px 0 14px;margin-bottom:8px;border-bottom:1px solid #edf0f7}
+.scratchpad-progress{font-size:13px;color:#67738b;margin-right:auto}
+.scratchpad-transport [data-action=playback]{background:#263dd1;border-color:#263dd1;color:#fff}
+.scratchpad-width{display:flex;align-items:center;gap:6px;font-size:13px;color:#67738b}
+.scratchpad-width select{padding-right:6px}
+.scratchpad-pen-only{display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:13px;margin:14px 0;min-height:30px;cursor:pointer}
+.scratchpad-pen-only input{width:18px;height:18px;accent-color:#263dd1}
+.scratchpad-pen-only span{color:#8590a6;font-size:12px}
+.scratchpad-paper{overflow:hidden;border:1px solid #dce3f2;border-radius:12px;background:repeating-linear-gradient(to bottom,#fff 0%,#fff calc(10% - 1px),#e6ebf6 calc(10% - 1px),#e6ebf6 10%);line-height:0}
+.scratchpad-paper canvas{display:block;width:100%;height:auto;aspect-ratio:10/7;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair}
+.scratchpad-paper canvas.scratchpad-erasing{cursor:cell}
+.scratchpad-pages{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px}
+.scratchpad-page-number{font-size:13px;color:#6c7892;white-space:nowrap;padding:0 3px}
+.scratchpad-pages [data-action=save]{color:#263dd1;margin-left:auto}
+.scratchpad-status{display:block;color:#566782;font-size:12px;line-height:1.7;margin-top:10px;overflow-wrap:anywhere}
+.scratchpad-status:empty{display:none}
+.scratchpad-note{font-size:12px;line-height:1.8;color:#8390a8;margin:12px 0 0}
+.scratchpad-body[hidden]{display:none}
+@media(min-width:1000px){
+  .session-area.scratch-enabled{max-width:1250px;display:grid;grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr);gap:22px;align-items:start}
+  .scratch-enabled>.session-heading{grid-column:1/-1;margin-bottom:4px}
+  .scratch-enabled>.session-card,.scratch-enabled>.result-card{grid-column:1;padding:25px 22px;min-width:0}
+  .scratch-enabled>.scratchpad-panel{grid-column:2;margin-top:0;position:sticky;top:18px}
+  .scratchpad-transport{display:none}
+  .scratch-enabled .listening-disc{margin:24px auto 18px;width:86px;height:86px}
+  .scratch-enabled .listen-title{font-size:20px}
+  .scratch-enabled .session-actions{flex-wrap:wrap}
+}
+@media(max-width:600px){
+  .scratchpad-panel{padding:18px 14px;border-radius:16px}
+  .scratchpad-panel button,.scratchpad-panel select{min-height:44px;padding:8px 10px}
+  .scratchpad-toolbar{gap:6px}
+  .scratchpad-pages{gap:6px}
+  .scratchpad-pages [data-action=save]{margin-left:0}
+  .scratchpad-heading h2{font-size:18px}
+}
