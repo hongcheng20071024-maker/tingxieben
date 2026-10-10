@@ -1,0 +1,47 @@
+[
+  {
+    "name": "persisted home option",
+    "old": "chineseVoice:\"auto\"}),[u,i]",
+    "new": "chineseVoice:\"auto\",rewriteWrong:v3ReadRewritePreference()}),[u,i]"
+  },
+  {
+    "name": "home checkbox in existing practice panel",
+    "old": "g.error&&(0,y.jsx)(\"p\",{className:\"inline-error\",role:\"alert\",children:g.error})",
+    "new": "(0,y.jsx)(V3RewriteSetting,{enabled:r.rewriteWrong,mode:r.mode,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}}),g.error&&(0,y.jsx)(\"p\",{className:\"inline-error\",role:\"alert\",children:g.error})"
+  },
+  {
+    "name": "native correction state for original Practice component",
+    "old": "function xO({session:e,exit:t,retry:a}){let",
+    "new": "function xO({session:e,exit:t,retry:a}){const [v3Rewritten,v3SetRewritten]=(0,G.useState)(false);let"
+  },
+  {
+    "name": "focus next after completing correction",
+    "old": "[u,m,h,n]),(0,G.useEffect)",
+    "new": "[u,m,h,n,v3Rewritten]),(0,G.useEffect)"
+  },
+  {
+    "name": "guard advancement and reset correction at next word",
+    "old": "function VR(){if(re(),u===o.length-1)",
+    "new": "function VR(){if(l.rewriteWrong&&m&&!c[c.length-1]?.correct&&!v3Rewritten)return;v3SetRewritten(false);if(re(),u===o.length-1)"
+  },
+  {
+    "name": "derive correction gate without changing original results",
+    "old": "Gn=c[c.length-1];return",
+    "new": "Gn=c[c.length-1],v3Pending=m&&l.rewriteWrong&&!Gn?.correct&&!v3Rewritten;return"
+  },
+  {
+    "name": "wrong spelling guidance in existing title",
+    "old": ":\"\\u8BB0\\u4F4F\\u8FD9\\u4E2A\\u8BCD\\uFF0C\\u4E0B\\u6B21\\u518D\\u6765\":l.cue",
+    "new": ":l.rewriteWrong?(v3Rewritten?\"已经写对，继续练习\":\"再写一遍，记住正确拼写\"):\"\\u8BB0\\u4F4F\\u8FD9\\u4E2A\\u8BCD\\uFF0C\\u4E0B\\u6B21\\u518D\\u6765\":l.cue"
+  },
+  {
+    "name": "render correction and disable original Next while pending",
+    "old": "m?(0,y.jsx)(me,{ref:U,className:\"answer-submit\",type:\"button\",onClick:VR,",
+    "new": "m&&l.rewriteWrong&&!Gn?.correct&&(0,y.jsx)(V3RewriteSpelling,{word:Ae.word,onComplete:()=>v3SetRewritten(true)},u),m?(0,y.jsx)(me,{ref:U,className:\"answer-submit\",type:\"button\",disabled:v3Pending,onKeyDown:j=>{j.key===\"Enter\"&&(j.repeat||j.nativeEvent.isComposing||j.keyCode===229)&&j.preventDefault()},onClick:VR,"
+  },
+  {
+    "name": "visible third version marker",
+    "old": "children:\"\\u5927\\u5B66\\u82F1\\u8BED / \\u81EA\\u4E3B\\u7EC3\\u4E60\"",
+    "new": "children:\"大学英语 / 自主练习 · v3\""
+  }
+]
