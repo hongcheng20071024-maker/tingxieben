@@ -6,14 +6,19 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 
 ## 👉 在线使用
 
-**https://hongcheng20071024-maker.github.io/tingxieben/**
+| 版本 | 地址 | 特点 |
+| --- | --- | --- |
+| **原版** | **https://hongcheng20071024-maker.github.io/tingxieben/** | 键盘听写：听到发音，输入拼写，即时批改 |
+| **v2 · 草稿纸** | **https://hongcheng20071024-maker.github.io/tingxieben/v2/** | 纸笔听写：手指 / Apple Pencil 在横线纸上手写、橡皮、撤销重做、多页、保存 PNG，草稿旁带播放控制 |
 
-免安装，浏览器打开即用。装到主屏幕后就是一个独立图标 —— 点开全屏、没有地址栏、不联网也能用。
+两个版本**各自独立，可以同时装两个主屏幕图标**；在同一个浏览器、同一个站点下**共用同一份本地词库**，换版本不用重新导入。
+第一次用建议先联网打开原版，再联网打开 v2（原因见 [docs/v2草稿纸.md](docs/v2草稿纸.md)）。
 
 <p align="center">
-  <img src="docs/qrcode.png" alt="扫码打开听写本" width="240">
+  <img src="docs/qrcode.png" alt="扫码打开听写本" width="190">
+  <img src="docs/v2草稿纸-iPad横屏.png" alt="v2 草稿纸界面" width="450">
   <br>
-  <sub>手机 / iPad 扫码直接打开（也可以截图发给同学）</sub>
+  <sub>左：扫码打开原版（也可以截图发给同学）　右：v2 的 iPad 草稿纸</sub>
 </p>
 
 ---
@@ -34,6 +39,7 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 - 应用内可以自己增删单词，按单元（分组）管理。
 - **导出 / 导入**：把词库导出成 JSON 存到「文件」App 或网盘，换设备时在新设备导入即可。
 - 数据存在**你自己设备**的浏览器里（localStorage，key 为 `listen-write-library-v1`），不会上传到任何服务器。
+- 原版与 v2 在**同一站点**下共用这份词库（localStorage 按站点共享），可以随时来回切换。
 - 页面首次打开时会预置一个单元「大学英语Unit1」（27 词），仅当浏览器里还没有任何词库时写入。
 - 用 AI 批量生成词库、或自己手写词库文件：格式见 **[docs/词库格式.md](docs/词库格式.md)**（内含可直接复制给 ChatGPT 的提示词模板）。
 
@@ -50,16 +56,23 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 
 | 路径 | 说明 |
 | --- | --- |
-| `index.html` | **部署用的成品**（由原始源码注入 PWA 配置生成） |
-| `source/听写本.html` | **原始单文件源码**（初版，未注入 PWA） |
+| `index.html` | **原版部署成品**（由原始源码注入 PWA 配置生成） |
+| `v2/index.html` | **v2 草稿纸成品**（先生成原版成品，再把草稿纸内联进去） |
+| `v2/manifest.webmanifest`、`v2/sw.js`、`v2/icon-*.png` | v2 的应用清单、离线缓存、图标（都限定在 `v2/` 目录内） |
+| `source/听写本.html` | **原始单文件源码**（初版，未注入 PWA，原版与 v2 都从它构建） |
+| `source/scratchpad.js`、`source/scratchpad.css` | v2 草稿纸的源码（构建时内联进 `v2/index.html`） |
 | `manifest.webmanifest` | PWA 清单：名称、图标、全屏模式 |
-| `sw.js` | Service Worker：离线缓存（cache-first） |
+| `sw.js` | 原版 Service Worker：离线缓存（cache-first） |
 | `icon-*.png` | 主屏幕图标（180 / 192 / 512 / maskable） |
 | `library-backup-unit1.json` | 预置词库（大学英语 Unit1，27 词），可在应用内「导入词库」 |
 | `tools/make_icons.py` | 生成图标（纯 Python，零依赖，不需要 Pillow） |
-| `tools/build_site.py` | 构建：`source/听写本.html` → `index.html` |
+| `tools/build_site.py` | 构建原版：`source/听写本.html` → `index.html` |
+| `tools/build_v2.py` | 构建 v2：先跑 `build_site.py`，再内联草稿纸 → `v2/index.html` |
 | `tools/deploy_pages.py` | 一键发布到 GitHub Pages（走 REST API，不需要 git） |
+| `tools/test_scratchpad.cjs` | v2 浏览器回归测试（Playwright，17 项 × Chromium / WebKit） |
+| `tests/v2-worker.test.cjs` | v2 离线缓存逻辑测试（`node tests/v2-worker.test.cjs`，无额外依赖） |
 | `docs/词库格式.md` | 词库 JSON 格式 + 用 AI 生成词库的提示词 |
+| `docs/v2草稿纸.md` | v2 说明：使用、构建、两个版本共存的缓存注意事项 |
 
 ## 自己部署一份
 
@@ -78,16 +91,20 @@ python tools/deploy_pages.py --repo mysite    # 换个仓库名
 
 ## 从源码构建
 
-改动只发生在 `<head>`：注入 PWA meta 与启动脚本（预置词库 + 注册 Service Worker），**不动原应用任何逻辑**。构建可复现 —— 同一份源码与词库，每次输出完全一致。
+改动只发生在 `<head>`（原版）与 `<head>` + `</body>` 前（v2）：注入 PWA meta、启动脚本与草稿纸，**不动原应用任何逻辑**。构建可复现 —— 同一份源码、词库与草稿纸，每次输出完全一致。
 
 ```bash
 python tools/make_icons.py     # 生成 4 个图标到仓库根目录
 python tools/build_site.py     # source/听写本.html + library-backup-unit1.json → index.html
+python tools/build_v2.py       # 再生成 v2/index.html（内含草稿纸）、v2/sw.js、清单与图标
+node tests/v2-worker.test.cjs  # 可选：验证 v2 的离线缓存逻辑
 ```
 
 ## 已知限制
 
 - **更新后要刷新两次**：`sw.js` 是 cache-first（为了离线可用），改了站点内容后，老用户需要重新打开一次才会拿到新版本。
+- **不要改原版 `sw.js` 的缓存清理范围**：原版 Service Worker 激活时会清掉本站点下所有非自己的缓存，**包括 v2 的离线缓存**。当前原版 `sw.js` 已冻结，所以互不影响；如果以后动了它，用户需要「先联网开原版 → 再联网开 v2」才能让 v2 恢复离线可用（v2 会在联网导航时自动补齐缺失的离线资源）。
+- **v2 的草稿不保存**：只在当前这一轮的内存里，切词 / 暂停 / 核对时保留，离开本轮、再练或刷新即清除；要留档就用「保存本页图片」导出 PNG（多页要逐页保存）。
 - iOS 只能通过 **Safari** 添加到主屏幕；微信 / QQ 内置浏览器不支持安装。
 - 词库不做云同步，靠导出 / 导入 JSON 手动搬。
 - 应用本体内联了 Tailwind CSS、React 与图标库，所以 `index.html` 接近 600 KB —— 换来的是**单文件、离线可用、零依赖**。
