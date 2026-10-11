@@ -1,0 +1,27 @@
+.v4-meaning-notice {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border: 1px solid #dce3fa;
+  border-radius: 12px;
+  background: #f4f6ff;
+  color: #445276;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.v4-meaning-notice strong { color: #263dd1; font-size: 14px; }
+.practice-panel > .v4-meaning-notice { margin: 16px 26px; }
+.v4-meaning-notice p { margin: 5px 0 0; font-size: 12px; }
+.v4-meaning-instruction { margin: 0 0 12px; color: #526180; font-size: 13px; line-height: 1.6; }
+.feedback p.v4-meaning-verdict { margin: 0 0 8px; font-size: 13px; font-weight: 600; line-height: 1.65; }
+.v4-reference-label { color: inherit; opacity: .85; font-size: 12px; }
+.session-area[data-meaning="true"] .result-row small.v4-answer-correct { color: #256750; }
+.session-area[data-meaning="true"] .result-row small.v4-answer-incorrect { color: #94512d; }
+.session-area .result-summary h2[tabindex="-1"]:focus-visible { outline: 2px solid #6372dc; outline-offset: 4px; border-radius: 6px; }
+#answer:lang(zh-CN) { font-size: 20px; letter-spacing: normal; }
+@media (max-width: 480px) {
+  .v4-meaning-notice { padding: 12px; }
+  #answer:lang(zh-CN) { font-size: 18px; }
+  .session-area[data-meaning="true"][data-paper="false"] .listening-disc { width: 72px; height: 72px; margin: 22px auto 18px; box-shadow: 0 0 0 8px #f8f9ff; }
+  .session-area[data-meaning="true"][data-paper="false"] .listening-disc svg { width: 32px; height: 32px; }
+  .session-area[data-meaning="true"][data-paper="false"] .replay-actions { margin: 16px 0 20px; }
+}
