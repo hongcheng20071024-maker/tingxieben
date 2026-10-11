@@ -1,0 +1,192 @@
+[
+  {
+    "name": "third dictation cue",
+    "old": "items:[[\"english\",\"\\u82F1\\u6587\\u53D1\\u97F3\"],[\"chinese\",\"\\u4E2D\\u6587\\u91CA\\u4E49 \\u2192 \\u5199\\u82F1\\u6587\"]]",
+    "new": "items:[[\"english\",\"\\u82F1\\u6587\\u53D1\\u97F3\"],[\"chinese\",\"\\u4E2D\\u6587\\u91CA\\u4E49 \\u2192 \\u5199\\u82F1\\u6587\"],[\"meaning\",\"英文发音 → 写中文意思\"]]"
+  },
+  {
+    "name": "validate selected Chinese meanings",
+    "old": "H=$p(U),N=",
+    "new": "H=(0,G.useMemo)(()=>r.cue===\"meaning\"?v4MissingMeanings(U):$p(U),[U,r.cue]),N="
+  },
+  {
+    "name": "guard start without usable meanings",
+    "old": "r.cue===\"chinese\"&&$p(E).length||",
+    "new": "(r.cue===\"chinese\"||r.cue===\"meaning\")&&(r.cue===\"meaning\"?v4MissingMeanings(E):$p(E)).length||"
+  },
+  {
+    "name": "missing meanings status",
+    "old": "r.cue===\"chinese\"&&H.length>0&&",
+    "new": "(r.cue===\"chinese\"||r.cue===\"meaning\")&&H.length>0&&"
+  },
+  {
+    "name": "disable incomplete meaning session",
+    "old": "||r.cue===\"chinese\"&&H.length>0,onClick:",
+    "new": "||(r.cue===\"chinese\"||r.cue===\"meaning\")&&H.length>0,onClick:"
+  },
+  {
+    "name": "home meaning notice and spelling option scope",
+    "old": "(0,y.jsx)(V3RewriteSetting,{enabled:r.rewriteWrong,mode:r.mode,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}})",
+    "new": "r.cue===\"meaning\"?(0,y.jsx)(V4MeaningNotice,{paper:r.mode===\"paper\"}):(0,y.jsx)(V3RewriteSetting,{enabled:r.rewriteWrong,mode:r.mode,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}})"
+  },
+  {
+    "name": "home prompt for meaning practice",
+    "old": "U.length?r.mode===\"keyboard\"?\"\\u542C\\u6E05\\u3001\\u62FC\\u5199\\uFF0C\\u518D\\u6838\\u5BF9\\u3002\"",
+    "new": "U.length?r.mode===\"keyboard\"?r.cue===\"meaning\"?\"听英文，写出一种中文意思，再核对。\":\"\\u542C\\u6E05\\u3001\\u62FC\\u5199\\uFF0C\\u518D\\u6838\\u5BF9\\u3002\""
+  },
+  {
+    "name": "keyboard mode description",
+    "old": "children:E===\"keyboard\"?\"\\u8F93\\u5165\\u62FC\\u5199\\uFF0C\\u5373\\u65F6\\u6279\\u6539\"",
+    "new": "children:E===\"keyboard\"?r.cue===\"meaning\"?\"输入中文意思，即时批改\":\"\\u8F93\\u5165\\u62FC\\u5199\\uFF0C\\u5373\\u65F6\\u6279\\u6539\""
+  },
+  {
+    "name": "fourth version marker",
+    "old": "children:\"大学英语 / 自主练习 · v3\"",
+    "new": "children:\"大学英语 / 自主练习 · v4\""
+  },
+  {
+    "name": "native meaning session and composition state",
+    "old": "function xO({session:e,exit:t,retry:a}){const [v3Rewritten,v3SetRewritten]=(0,G.useState)(false);let",
+    "new": "function xO({session:e,exit:t,retry:a}){const [v3Rewritten,v3SetRewritten]=(0,G.useState)(false);const v4Meaning=e.settings.cue===\"meaning\",v4Composing=(0,G.useRef)(false),v4ResultHeading=(0,G.useRef)(null);let"
+  },
+  {
+    "name": "meaning scoring and input composition guard",
+    "old": "H.current||m||!s.trim()&&!j||",
+    "new": "H.current||m||v4Composing.current&&!j||!s.trim()&&!j||"
+  },
+  {
+    "name": "any complete meaning accepted",
+    "old": "correct:!j&&Wa(s)===Wa(Ae.word)",
+    "new": "correct:!j&&(v4Meaning?v4CheckMeaning(s,Ae.meaning):Wa(s)===Wa(Ae.word))"
+  },
+  {
+    "name": "spelling only advance guard",
+    "old": "if(l.rewriteWrong&&m&&!c[c.length-1]?.correct&&!v3Rewritten)return;",
+    "new": "if(!v4Meaning&&l.rewriteWrong&&m&&!c[c.length-1]?.correct&&!v3Rewritten)return;"
+  },
+  {
+    "name": "spelling only correction pending",
+    "old": "v3Pending=m&&l.rewriteWrong&&!Gn?.correct&&!v3Rewritten;",
+    "new": "v3Pending=m&&!v4Meaning&&l.rewriteWrong&&!Gn?.correct&&!v3Rewritten;"
+  },
+  {
+    "name": "spelling only correction form",
+    "old": "m&&l.rewriteWrong&&!Gn?.correct&&(0,y.jsx)(V3RewriteSpelling",
+    "new": "m&&!v4Meaning&&l.rewriteWrong&&!Gn?.correct&&(0,y.jsx)(V3RewriteSpelling"
+  },
+  {
+    "name": "paper meaning writing cue",
+    "old": "T(\"\\u73B0\\u5728\\u5199\\u4E0B\\u4F60\\u542C\\u5230\\u7684\\u8BCD\"),Mg(st)",
+    "new": "T(v4Meaning?\"现在写下这个单词的一种中文意思\":\"\\u73B0\\u5728\\u5199\\u4E0B\\u4F60\\u542C\\u5230\\u7684\\u8BCD\"),Mg(st)"
+  },
+  {
+    "name": "meaning session eyebrow",
+    "old": "children:n?\"PAPER & PEN\":\"LISTEN & SPELL\"",
+    "new": "children:n?\"PAPER & PEN\":v4Meaning?\"LISTEN & MEANING\":\"LISTEN & SPELL\""
+  },
+  {
+    "name": "meaning session heading",
+    "old": ":n?\"\\u7EB8\\u7B14\\u542C\\u5199\":\"\\u952E\\u76D8\\u542C\\u5199\"",
+    "new": ":n?\"\\u7EB8\\u7B14\\u542C\\u5199\":v4Meaning?\"释义听写\":\"\\u952E\\u76D8\\u542C\\u5199\""
+  },
+  {
+    "name": "meaning session subtitle",
+    "old": "l.cue===\"chinese\"?\"\\u542C\\u4E2D\\u6587\\uFF0C\\u5199\\u82F1\\u6587\":\"\\u542C\\u82F1\\u6587\\uFF0C\\u5199\\u82F1\\u6587\"",
+    "new": "v4Meaning?\"听英文，写中文意思\":l.cue===\"chinese\"?\"\\u542C\\u4E2D\\u6587\\uFF0C\\u5199\\u82F1\\u6587\":\"\\u542C\\u82F1\\u6587\\uFF0C\\u5199\\u82F1\\u6587\""
+  },
+  {
+    "name": "meaning result heading",
+    "old": ":`${Tt} / ${o.length} \\u8BCD\\u62FC\\u5199\\u6B63\\u786E`",
+    "new": ":v4Meaning?`${Tt} / ${o.length} 词释义正确`:`${Tt} / ${o.length} \\u8BCD\\u62FC\\u5199\\u6B63\\u786E`"
+  },
+  {
+    "name": "retain correct meaning answers in review",
+    "old": "!n&&!c[st]?.correct&&(0,y.jsxs)(\"small\"",
+    "new": "!n&&(v4Meaning||!c[st]?.correct)&&(0,y.jsxs)(\"small\""
+  },
+  {
+    "name": "meaning feedback without spelling rewrite",
+    "old": "className:\"listen-title\",children:n?w:m?Gn?.correct?\"\\u62FC\\u5199\\u6B63\\u786E\\uFF01\":l.rewriteWrong?(v3Rewritten?\"已经写对，继续练习\":\"再写一遍，记住正确拼写\"):\"\\u8BB0\\u4F4F\\u8FD9\\u4E2A\\u8BCD\\uFF0C\\u4E0B\\u6B21\\u518D\\u6765\":l.cue===\"chinese\"?\"\\u542C\\u4E2D\\u6587\\u91CA\\u4E49\\uFF0C\\u5199\\u51FA\\u5BF9\\u5E94\\u7684\\u82F1\\u6587\":\"\\u542C\\u4E00\\u542C\\uFF0C\\u5199\\u51FA\\u4F60\\u542C\\u5230\\u7684\\u5355\\u8BCD\"",
+    "new": "className:\"listen-title\",children:n?w:v4Meaning?(m?(Gn?.correct?\"意思正确！\":Gn?.revealed?\"先记住一种意思，再继续\":\"看看参考释义，再记一次\"):\"听英文，写出一种中文意思\"):m?Gn?.correct?\"\\u62FC\\u5199\\u6B63\\u786E\\uFF01\":l.rewriteWrong?(v3Rewritten?\"已经写对，继续练习\":\"再写一遍，记住正确拼写\"):\"\\u8BB0\\u4F4F\\u8FD9\\u4E2A\\u8BCD\\uFF0C\\u4E0B\\u6B21\\u518D\\u6765\":l.cue===\"chinese\"?\"\\u542C\\u4E2D\\u6587\\u91CA\\u4E49\\uFF0C\\u5199\\u51FA\\u5BF9\\u5E94\\u7684\\u82F1\\u6587\":\"\\u542C\\u4E00\\u542C\\uFF0C\\u5199\\u51FA\\u4F60\\u542C\\u5230\\u7684\\u5355\\u8BCD\""
+  },
+  {
+    "name": "composition prevents form submission",
+    "old": "j.preventDefault(),m||Tg()",
+    "new": "j.preventDefault(),m||v4Composing.current||Tg()"
+  },
+  {
+    "name": "accessible Chinese input and instruction",
+    "old": "children:[(0,y.jsx)(\"label\",{className:\"sr-only\",htmlFor:\"answer\",children:\"\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\"})",
+    "new": "children:[v4Meaning&&(0,y.jsx)(V4MeaningNotice,{compact:true}),(0,y.jsx)(\"label\",{className:\"sr-only\",htmlFor:\"answer\",children:v4Meaning?\"输入中文意思\":\"\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\"})"
+  },
+  {
+    "name": "input language and keyboard help",
+    "old": "spellCheck:!1,lang:\"en\",inputMode:\"text\",enterKeyHint:\"done\",placeholder:\"\\u5728\\u8FD9\\u91CC\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\",value:s",
+    "new": "spellCheck:!1,lang:v4Meaning?\"zh-CN\":\"en\",inputMode:\"text\",enterKeyHint:\"done\",\"aria-describedby\":v4Meaning?\"meaning-answer-description\":void 0,placeholder:v4Meaning?\"写出任意一种中文意思\":\"\\u5728\\u8FD9\\u91CC\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\",value:s"
+  },
+  {
+    "name": "Chinese composition and repeated Enter safety",
+    "old": "onChange:j=>d(j.target.value),onKeyDown:j=>{j.key===\"Enter\"&&(j.nativeEvent.isComposing||j.keyCode===229)&&j.preventDefault()}",
+    "new": "onChange:j=>d(j.target.value),onCompositionStart:()=>{v4Composing.current=true},onCompositionEnd:()=>{v4Composing.current=false},onBlur:()=>{v4Composing.current=false},onKeyDown:j=>{j.key===\"Enter\"&&(v4Composing.current||j.repeat||j.nativeEvent.isComposing||j.keyCode===229)&&j.preventDefault()}"
+  },
+  {
+    "name": "hide Chinese answer hint for meaning test",
+    "old": "children:[(0,y.jsx)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>L(!S)",
+    "new": "children:[!v4Meaning&&(0,y.jsx)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>L(!S)"
+  },
+  {
+    "name": "meaning submit label",
+    "old": "className:\"answer-submit\",type:\"submit\",disabled:!s.trim(),children:[\"\\u68C0\\u67E5\\u62FC\\u5199 \"",
+    "new": "className:\"answer-submit\",type:\"submit\",\"aria-label\":v4Meaning?\"检查意思\":void 0,disabled:!s.trim(),children:[v4Meaning?\"检查意思 \":\"\\u68C0\\u67E5\\u62FC\\u5199 \""
+  },
+  {
+    "name": "meaning grading reminder",
+    "old": "className:\"paper-note\",children:l.cue===\"chinese\"?",
+    "new": "className:\"paper-note\",children:v4Meaning?\"按词库中的释义核对；同义表达可在分组中补充。\":l.cue===\"chinese\"?"
+  },
+  {
+    "name": "restore last practice direction",
+    "old": "cue:\"english\",mode:\"keyboard\"",
+    "new": "cue:v4ReadCuePreference(),mode:\"keyboard\""
+  },
+  {
+    "name": "remember practice direction changes",
+    "old": "N=(E,J)=>n(fe=>({...fe,[E]:J}));",
+    "new": "N=(E,J)=>{E===\"cue\"&&v4SaveCuePreference(J);n(fe=>({...fe,[E]:J}))};"
+  },
+  {
+    "name": "meaning scoped presentation",
+    "old": "className:\"session-area\",children:",
+    "new": "className:\"session-area\",\"data-meaning\":v4Meaning,\"data-paper\":n,children:"
+  },
+  {
+    "name": "record revealed answer separately",
+    "old": "word:Ae,answer:j?",
+    "new": "word:Ae,revealed:!!j,answer:j?"
+  },
+  {
+    "name": "explicit meaning verdict in feedback",
+    "old": "children:[(0,y.jsx)(\"strong\",{children:Ae.word}),Ae.meaning&&",
+    "new": "children:[v4Meaning&&(0,y.jsx)(V4MeaningVerdict,{correct:Gn?.correct,revealed:Gn?.revealed}),(0,y.jsx)(\"strong\",{children:Ae.word}),v4Meaning&&(0,y.jsx)(\"div\",{className:\"v4-reference-label\",children:\"参考释义\"}),Ae.meaning&&"
+  },
+  {
+    "name": "correct answers have correct result styling",
+    "old": "!n&&(v4Meaning||!c[st]?.correct)&&(0,y.jsxs)(\"small\",{children:",
+    "new": "!n&&(v4Meaning||!c[st]?.correct)&&(0,y.jsxs)(\"small\",{className:v4Meaning?(c[st]?.correct?\"v4-answer-correct\":\"v4-answer-incorrect\"):void 0,children:"
+  },
+  {
+    "name": "explain unusable meanings",
+    "old": "H.length,\" \\u4E2A\\u8BCD\\u7F3A\\u5C11\\u4E2D\\u6587\\u91CA\\u4E49\\uFF08\"",
+    "new": "H.length,r.cue===\"meaning\"?\" 个词缺少可用于判分的中文释义（\":\" \\u4E2A\\u8BCD\\u7F3A\\u5C11\\u4E2D\\u6587\\u91CA\\u4E49\\uFF08\""
+  },
+  {
+    "name": "focus score on completion and keep meaning feedback in view",
+    "old": "!h&&!n&&(m?U.current?.focus():ee.current?.focus())",
+    "new": "h?v4ResultHeading.current?.focus():!n&&(m?(v4Meaning?U.current?.focus({preventScroll:true}):U.current?.focus()):ee.current?.focus())"
+  },
+  {
+    "name": "focusable result score heading",
+    "old": "(0,y.jsx)(\"h2\",{children:n?`",
+    "new": "(0,y.jsx)(\"h2\",{ref:v4ResultHeading,tabIndex:-1,children:n?`"
+  }
+]
