@@ -1,0 +1,26 @@
+.v5-audio-setting { margin: 18px 0; padding: 16px; border: 1px solid #e1e6f4; border-radius: 12px; background: #f8faff; }
+.v5-audio-setting > label { display: block; font-size: 14px; font-weight: 600; color: #15284d; margin-bottom: 9px; }
+.v5-audio-setting-row { display: flex; align-items: stretch; gap: 10px; }
+.v5-audio-setting select { flex: 1; min-width: 0; min-height: 44px; padding: 8px 34px 8px 12px; border: 1px solid #ccd5e7; border-radius: 8px; background: white; color: #203558; font-size: 14px; }
+.v5-audio-preview { flex: none; min-height: 44px; padding: 8px 12px; border: 1px solid #aebce0; border-radius: 8px; color: #243bcc; background: white; font-size: 13px; cursor: pointer; }
+.v5-audio-preview:hover { background: #eef1ff; }
+.v5-audio-preview:focus-visible, .v5-audio-setting select:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+.v5-audio-setting p { margin-top: 10px; color: #526480; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.v5-audio-setting .v5-audio-accent-note { margin-top: 5px; }
+.v5-audio-status { margin: 12px 0; color: #526480; font-size: 12px; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
+.v5-audio-status p { margin: 0; }
+.v5-audio-credit { margin-top: 5px !important; }
+.v5-audio-credit a { text-decoration: underline; text-underline-offset: 2px; }
+.v5-audio-credits { margin: 16px 0; padding: 12px 14px; border: 1px solid #e1e6f4; border-radius: 10px; color: #526480; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.v5-audio-credits summary { min-height: 32px; display: list-item; padding: 5px 0; color: #203558; font-weight: 600; cursor: pointer; }
+.v5-audio-credits summary:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+.v5-audio-credits p { margin: 8px 0; }
+.v5-audio-credits ol { margin: 8px 0; padding-left: 22px; max-height: 260px; overflow-y: auto; }
+.v5-audio-credits li { padding: 4px 0; }
+.v5-audio-credits a { text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 420px) {
+  .v5-audio-setting { padding: 12px; }
+  .v5-audio-setting-row { gap: 8px; }
+  .v5-audio-setting select { padding-left: 8px; font-size: 13px; }
+  .v5-audio-preview { padding: 8px; font-size: 12px; }
+}
