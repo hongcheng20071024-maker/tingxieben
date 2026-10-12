@@ -1,0 +1,242 @@
+[
+  {
+    "name": "add combined direction",
+    "old": "[\"meaning\",\"英文发音 → 写中文意思\"]]",
+    "new": "[\"meaning\",\"英文发音 → 写中文意思\"],[\"dual\",\"英文发音 → 写英文和中文\"]]"
+  },
+  {
+    "name": "new direction preference key",
+    "old": "cue:v4ReadCuePreference(),mode:",
+    "new": "cue:v5ReadCuePreference(),mode:"
+  },
+  {
+    "name": "initial audio preference",
+    "old": "rewriteWrong:v3ReadRewritePreference()}",
+    "new": "rewriteWrong:v3ReadRewritePreference(),audioSource:v5ReadAudioPreference()}"
+  },
+  {
+    "name": "save direction and audio choices",
+    "old": "N=(E,J)=>{E===\"cue\"&&v4SaveCuePreference(J);n(fe=>({...fe,[E]:J}))};",
+    "new": "N=(E,J)=>{E===\"cue\"&&v5SaveCuePreference(J);E===\"audioSource\"&&v5SaveAudioPreference(J);n(fe=>({...fe,[E]:J}))};"
+  },
+  {
+    "name": "home speech hook",
+    "old": "g=bg(),[x,b]",
+    "new": "g=v5UseSpeech(r.audioSource),[x,b]"
+  },
+  {
+    "name": "usable meanings for combined cue",
+    "old": "r.cue===\"meaning\"?v4MissingMeanings(U):$p(U)",
+    "new": "v5CueHasMeaning(r.cue)?v4MissingMeanings(U):$p(U)"
+  },
+  {
+    "name": "guard missing meanings at start",
+    "old": "(r.cue===\"chinese\"||r.cue===\"meaning\")&&(r.cue===\"meaning\"?v4MissingMeanings(E):$p(E)).length||",
+    "new": "(r.cue===\"chinese\"||v5CueHasMeaning(r.cue))&&(v5CueHasMeaning(r.cue)?v4MissingMeanings(E):$p(E)).length||"
+  },
+  {
+    "name": "show missing meanings warning",
+    "old": "(r.cue===\"chinese\"||r.cue===\"meaning\")&&H.length>0&&",
+    "new": "(r.cue===\"chinese\"||v5CueHasMeaning(r.cue))&&H.length>0&&"
+  },
+  {
+    "name": "disable incomplete combined session",
+    "old": "||(r.cue===\"chinese\"||r.cue===\"meaning\")&&H.length>0,onClick:",
+    "new": "||(r.cue===\"chinese\"||v5CueHasMeaning(r.cue))&&H.length>0,onClick:"
+  },
+  {
+    "name": "explain usable meanings",
+    "old": "H.length,r.cue===\"meaning\"?",
+    "new": "H.length,v5CueHasMeaning(r.cue)?"
+  },
+  {
+    "name": "home combined notice and rewrite option",
+    "old": "r.cue===\"meaning\"?(0,y.jsx)(V4MeaningNotice",
+    "new": "r.cue===\"dual\"?(0,y.jsx)(V5DualSetting,{paper:r.mode===\"paper\",enabled:r.rewriteWrong,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}}):r.cue===\"meaning\"?(0,y.jsx)(V4MeaningNotice"
+  },
+  {
+    "name": "combined practice summary",
+    "old": "U.length?r.mode===\"keyboard\"?r.cue===\"meaning\"?",
+    "new": "U.length?r.mode===\"keyboard\"?r.cue===\"dual\"?\"听英文，写英文和一种中文意思，再核对。\":r.cue===\"meaning\"?"
+  },
+  {
+    "name": "combined keyboard description",
+    "old": "children:E===\"keyboard\"?r.cue===\"meaning\"?",
+    "new": "children:E===\"keyboard\"?r.cue===\"dual\"?\"输入英文和中文，分别批改\":r.cue===\"meaning\"?"
+  },
+  {
+    "name": "version five marker",
+    "old": "children:\"大学英语 / 自主练习 · v4\"",
+    "new": "children:\"大学英语 / 自主练习 · v5\""
+  },
+  {
+    "name": "audio resource setting and preview status",
+    "old": "(0,y.jsxs)(\"div\",{className:\"voice-previews\",children:",
+    "new": "(0,y.jsx)(V5AudioSetting,{source:r.audioSource,onChange:E=>{g.cancel(),N(\"audioSource\",E)}}),(0,y.jsx)(V5AudioStatus,{speech:g,showCredits:true}),(0,y.jsxs)(\"div\",{className:\"voice-previews\",children:"
+  },
+  {
+    "name": "resource preview label",
+    "old": "children:[(0,y.jsx)(lo,{size:16}),\"\\u8BD5\\u542C\\u82F1\\u6587\"]",
+    "new": "children:[(0,y.jsx)(lo,{size:16}),\"试听发音资源\"]"
+  },
+  {
+    "name": "combined session state",
+    "old": "const v4Meaning=e.settings.cue===\"meaning\",",
+    "new": "const v5Dual=e.settings.cue===\"dual\",[v5Chinese,v5SetChinese]=(0,G.useState)(\"\"),v5ChineseRef=(0,G.useRef)(null),v5ChineseComposing=(0,G.useRef)(false),v5LastField=(0,G.useRef)(\"english\");const v4Meaning=e.settings.cue===\"meaning\","
+  },
+  {
+    "name": "session speech hook",
+    "old": "N=bg(),oe=",
+    "new": "N=v5UseSpeech(l.audioSource),oe="
+  },
+  {
+    "name": "preserve focused field on replay",
+    "old": "function Rr(j=!1){R(!0),Se(Ae,j?.65:Number(l.rate)),ee.current?.focus()}",
+    "new": "function Rr(j=!1){R(!0),Se(Ae,j?.65:Number(l.rate)),(v5Dual&&v5LastField.current===\"meaning\"?v5ChineseRef:ee).current?.focus()}"
+  },
+  {
+    "name": "both inputs and both composition guards",
+    "old": "H.current||m||v4Composing.current&&!j||!s.trim()&&!j||",
+    "new": "H.current||m||(v4Composing.current||v5Dual&&v5ChineseComposing.current)&&!j||(!s.trim()||v5Dual&&!v5Chinese.trim())&&!j||"
+  },
+  {
+    "name": "independent grade fields preserve first attempt",
+    "old": "word:Ae,revealed:!!j,answer:j?\"\\u672A\\u4F5C\\u7B54 / \\u67E5\\u770B\\u7B54\\u6848\":s.trim(),correct:!j&&(v4Meaning?v4CheckMeaning(s,Ae.meaning):Wa(s)===Wa(Ae.word))",
+    "new": "word:Ae,...(v5Dual?v5GradeDual(s,v5Chinese,Ae,j):{revealed:!!j,answer:j?\"\\u672A\\u4F5C\\u7B54 / \\u67E5\\u770B\\u7B54\\u6848\":s.trim(),correct:!j&&(v4Meaning?v4CheckMeaning(s,Ae.meaning):Wa(s)===Wa(Ae.word))})"
+  },
+  {
+    "name": "only wrong spelling blocks advancing",
+    "old": "!v4Meaning&&l.rewriteWrong&&m&&!c[c.length-1]?.correct&&!v3Rewritten",
+    "new": "!v4Meaning&&l.rewriteWrong&&m&&(v5Dual?!c[c.length-1]?.spellingCorrect:!c[c.length-1]?.correct)&&!v3Rewritten"
+  },
+  {
+    "name": "clear both inputs on new word",
+    "old": "H.current=!1,(0,FR.flushSync)(()=>{i(u+1),d(\"\"),v(!1),L(!1),R(!0)})",
+    "new": "H.current=!1,v4Composing.current=false,v5ChineseComposing.current=false,v5LastField.current=\"english\",(0,FR.flushSync)(()=>{i(u+1),d(\"\"),v5SetChinese(\"\"),v(!1),L(!1),R(!0)})"
+  },
+  {
+    "name": "rewrite pending only wrong English",
+    "old": "v3Pending=m&&!v4Meaning&&l.rewriteWrong&&!Gn?.correct&&!v3Rewritten",
+    "new": "v3Pending=m&&!v4Meaning&&l.rewriteWrong&&(v5Dual?!Gn?.spellingCorrect:!Gn?.correct)&&!v3Rewritten"
+  },
+  {
+    "name": "rewrite form only wrong English",
+    "old": "m&&!v4Meaning&&l.rewriteWrong&&!Gn?.correct&&(0,y.jsx)(V3RewriteSpelling",
+    "new": "m&&!v4Meaning&&l.rewriteWrong&&(v5Dual?!Gn?.spellingCorrect:!Gn?.correct)&&(0,y.jsx)(V3RewriteSpelling"
+  },
+  {
+    "name": "combined paper writing instruction",
+    "old": "T(v4Meaning?\"现在写下这个单词的一种中文意思\":",
+    "new": "T(v5Dual?\"现在写下英文和一种中文意思\":v4Meaning?\"现在写下这个单词的一种中文意思\":"
+  },
+  {
+    "name": "combined session data marker",
+    "old": "\"data-meaning\":v4Meaning,\"data-paper\":n,",
+    "new": "\"data-meaning\":v4Meaning,\"data-paper\":n,\"data-dual\":v5Dual,"
+  },
+  {
+    "name": "combined eyebrow",
+    "old": "children:n?\"PAPER & PEN\":v4Meaning?",
+    "new": "children:n?\"PAPER & PEN\":v5Dual?\"LISTEN · SPELL · MEANING\":v4Meaning?"
+  },
+  {
+    "name": "combined heading",
+    "old": ":v4Meaning?\"释义听写\":\"\\u952E\\u76D8\\u542C\\u5199\"",
+    "new": ":v5Dual?\"中英文听写\":v4Meaning?\"释义听写\":\"\\u952E\\u76D8\\u542C\\u5199\""
+  },
+  {
+    "name": "combined subtitle",
+    "old": "v4Meaning?\"听英文，写中文意思\":l.cue",
+    "new": "v5Dual?\"听英文，写英文和中文意思\":v4Meaning?\"听英文，写中文意思\":l.cue"
+  },
+  {
+    "name": "joint result score",
+    "old": ":v4Meaning?`${Tt} / ${o.length} 词释义正确`:",
+    "new": ":v5Dual?`${Tt} / ${o.length} 词双项正确`:v4Meaning?`${Tt} / ${o.length} 词释义正确`:"
+  },
+  {
+    "name": "result individual counts and paper credits",
+    "old": "(0,y.jsx)(\"div\",{className:\"result-list\",children:",
+    "new": "n&&(0,y.jsx)(V5AudioCredits,{speech:N}),!n&&v5Dual&&(0,y.jsx)(V5DualTotals,{records:c,total:o.length}),(0,y.jsx)(\"div\",{className:\"result-list\",children:"
+  },
+  {
+    "name": "both answers preserved in results",
+    "old": "!n&&(v4Meaning||!c[st]?.correct)&&(0,y.jsxs)(\"small\",",
+    "new": "!n&&v5Dual&&(0,y.jsx)(V5DualAnswers,{record:c[st]}),!n&&!v5Dual&&(v4Meaning||!c[st]?.correct)&&(0,y.jsxs)(\"small\","
+  },
+  {
+    "name": "combined listen feedback title",
+    "old": "className:\"listen-title\",children:n?w:v4Meaning?",
+    "new": "className:\"listen-title\",children:n?w:v5Dual?(m?(Gn?.correct?\"英文和中文都正确！\":Gn?.revealed?\"对照英文和释义，再记一次\":!Gn?.spellingCorrect&&l.rewriteWrong?(v3Rewritten?\"拼写已巩固，继续练习\":\"再写一遍，记住英文拼写\"):Gn?.spellingCorrect?\"英文正确，再记一下中文意思\":\"看看拼写和释义，再记一次\"):\"听英文，写英文和中文意思\"):v4Meaning?"
+  },
+  {
+    "name": "both composition guards on submit",
+    "old": "j.preventDefault(),m||v4Composing.current||Tg()",
+    "new": "j.preventDefault(),m||v4Composing.current||v5Dual&&v5ChineseComposing.current||Tg()"
+  },
+  {
+    "name": "combined instruction and visible English label",
+    "old": "children:[v4Meaning&&(0,y.jsx)(V4MeaningNotice,{compact:true}),(0,y.jsx)(\"label\",{className:\"sr-only\",htmlFor:\"answer\",",
+    "new": "children:[v5Dual&&(0,y.jsx)(V5DualInstruction,{}),v4Meaning&&(0,y.jsx)(V4MeaningNotice,{compact:true}),(0,y.jsx)(\"label\",{className:v5Dual?\"v5-answer-label\":\"sr-only\",htmlFor:\"answer\","
+  },
+  {
+    "name": "English Enter goes to Chinese",
+    "old": "enterKeyHint:\"done\",\"aria-describedby\":v4Meaning?",
+    "new": "enterKeyHint:v5Dual?\"next\":\"done\",\"aria-describedby\":v5Dual?\"dual-answer-description\":v4Meaning?"
+  },
+  {
+    "name": "English keyboard handoff",
+    "old": "onKeyDown:j=>{j.key===\"Enter\"&&(v4Composing.current||j.repeat||j.nativeEvent.isComposing||j.keyCode===229)&&j.preventDefault()}",
+    "new": "onKeyDown:j=>{if(j.key===\"Enter\"){if(v4Composing.current||j.repeat||j.nativeEvent.isComposing||j.keyCode===229)j.preventDefault();else if(v5Dual){j.preventDefault();v5ChineseRef.current?.focus()}}}"
+  },
+  {
+    "name": "remember English input focus",
+    "old": "onChange:j=>d(j.target.value),onCompositionStart:",
+    "new": "onChange:j=>d(j.target.value),onFocus:()=>{v5LastField.current=\"english\"},onCompositionStart:"
+  },
+  {
+    "name": "feedback focus without scrolling",
+    "old": "m?(v4Meaning?U.current?.focus({preventScroll:true}):U.current?.focus())",
+    "new": "m?((v4Meaning||v5Dual)?U.current?.focus({preventScroll:true}):U.current?.focus())"
+  },
+  {
+    "name": "add Chinese field before feedback",
+    "old": "}),m?(0,y.jsxs)(\"div\",{className:\"feedback \"+",
+    "new": "}),v5Dual&&(0,y.jsx)(V5ChineseInput,{inputRef:v5ChineseRef,value:v5Chinese,onChange:v5SetChinese,disabled:m,composing:v5ChineseComposing,lastField:v5LastField}),m?(0,y.jsxs)(\"div\",{className:\"feedback \"+"
+  },
+  {
+    "name": "two independent verdicts",
+    "old": "children:[v4Meaning&&(0,y.jsx)(V4MeaningVerdict",
+    "new": "children:[v5Dual&&(0,y.jsx)(V5DualVerdict,{record:Gn}),v4Meaning&&(0,y.jsx)(V4MeaningVerdict"
+  },
+  {
+    "name": "reference meaning label for both modes",
+    "old": "v4Meaning&&(0,y.jsx)(\"div\",{className:\"v4-reference-label\",",
+    "new": "(v4Meaning||v5Dual)&&(0,y.jsx)(\"div\",{className:\"v4-reference-label\","
+  },
+  {
+    "name": "feedback original answers for both parts",
+    "old": "!Gn?.correct&&(0,y.jsxs)(\"p\",{children:[\"\\u4F60\\u7684\\u7B54\\u6848\\uFF1A\"",
+    "new": "v5Dual&&(0,y.jsx)(V5DualAnswers,{record:Gn}),!v5Dual&&!Gn?.correct&&(0,y.jsxs)(\"p\",{children:[\"\\u4F60\\u7684\\u7B54\\u6848\\uFF1A\""
+  },
+  {
+    "name": "never reveal Chinese hint before dual check",
+    "old": "children:[!v4Meaning&&(0,y.jsx)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>L(!S)",
+    "new": "children:[!v4Meaning&&!v5Dual&&(0,y.jsx)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>L(!S)"
+  },
+  {
+    "name": "combined submit accessible label and requirement",
+    "old": "\"aria-label\":v4Meaning?\"检查意思\":void 0,disabled:!s.trim(),children:[v4Meaning?",
+    "new": "\"aria-label\":v5Dual?\"检查英文和中文\":v4Meaning?\"检查意思\":void 0,disabled:!s.trim()||v5Dual&&!v5Chinese.trim(),children:[v5Dual?\"检查英文和中文 \":v4Meaning?"
+  },
+  {
+    "name": "combined grade reminder",
+    "old": "className:\"paper-note\",children:v4Meaning?",
+    "new": "className:\"paper-note\",children:v5Dual?\"忽略英文大小写和首尾空格；中文匹配词库中的一种完整释义，两项都对才计为正确。\":v4Meaning?"
+  },
+  {
+    "name": "session actual audio source and optional credits",
+    "old": "(0,y.jsxs)(\"p\",{className:\"voice-note\",children:[Be?`\\u63D0\\u793A\\u97F3\\u8272\\uFF1A${Be.name||de} \\xB7 ${Be.lang}${Be.localService?\"\":\" \\xB7 \\u9700\\u8054\\u7F51\"}`:`${de}\\u58F0\\u97F3\\u7531\\u7CFB\\u7EDF\\u63D0\\u4F9B\\uFF1B\\u65E0\\u58F0\\u65F6\\u8BF7\\u68C0\\u67E5\\u8BBE\\u5907\\u7684${de}\\u8BED\\u97F3\\u8BBE\\u7F6E\\u3002`,m&&l.cue===\"chinese\"&&(0,y.jsx)(\"span\",{className:\"answer-voice-note\",children:\"\\u7B54\\u6848\\u53D1\\u97F3\\u4F7F\\u7528\\u6240\\u9009\\u82F1\\u6587\\u97F3\\u8272\"})]})",
+    "new": "(0,y.jsx)(V5AudioStatus,{speech:N,showCredits:m}),(!l.audioSource||l.audioSource===\"device\"||l.cue===\"chinese\")&&(0,y.jsxs)(\"p\",{className:\"voice-note\",children:[Be?`\\u63D0\\u793A\\u97F3\\u8272\\uFF1A${Be.name||de} \\xB7 ${Be.lang}${Be.localService?\"\":\" \\xB7 \\u9700\\u8054\\u7F51\"}`:`${de}\\u58F0\\u97F3\\u7531\\u7CFB\\u7EDF\\u63D0\\u4F9B\\uFF1B\\u65E0\\u58F0\\u65F6\\u8BF7\\u68C0\\u67E5\\u8BBE\\u5907\\u7684${de}\\u8BED\\u97F3\\u8BBE\\u7F6E\\u3002`,m&&l.cue===\"chinese\"&&(0,y.jsx)(\"span\",{className:\"answer-voice-note\",children:\"\\u7B54\\u6848\\u53D1\\u97F3\\u4F7F\\u7528\\u6240\\u9009\\u82F1\\u6587\\u97F3\\u8272\"})]})"
+  }
+]

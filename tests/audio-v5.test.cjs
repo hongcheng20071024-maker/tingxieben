@@ -1,0 +1,304 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const data = new Map();
+const jsx = (type, props) => ({ type, ...props });
+const context = vm.createContext({ URL, AbortController, setTimeout, clearTimeout,
+  y: { jsx, jsxs: jsx },
+  localStorage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } });
+vm.runInContext(fs.readFileSync(path.join(__dirname, '../source/audio-v5.js'), 'utf8') +
+  '\nglobalThis.audio = { v5AudioWord, v5AudioUrl, v5RecordingCandidates, v5ReadAudioPreference, v5SaveAudioPreference, v5CreateAudioController, V5AudioStatus, V5AudioCredits };', context);
+const { v5AudioWord, v5AudioUrl, v5RecordingCandidates, v5ReadAudioPreference, v5SaveAudioPreference, v5CreateAudioController, V5AudioStatus, V5AudioCredits } = context.audio;
+const passed = [];
+function pass(name) { passed.push(name); }
+const recording = (word = 'hello', accent = 'us') => ({
+  audio: `https://api.dictionaryapi.dev/media/pronunciations/en/${word}-${accent}.mp3`,
+  sourceUrl: `https://commons.wikimedia.org/wiki/File:En-${accent}-${word}.ogg`,
+  license: { name: 'CC BY-SA 3.0', url: 'https://creativecommons.org/licenses/by-sa/3.0/' }
+});
+const payload = (word = 'hello', accents = ['us', 'uk']) => [{ word, phonetics: accents.map(accent => recording(word, accent)) }];
+const response = body => ({ ok: true, json: async () => body });
+const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
+const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+
+function harness({ fetcher = async () => response(payload()), audioReject = false, audioThrows = false,
+  cache = new Map() } = {}) {
+  const states = [], fetches = [], spoken = [], audios = [], timers = new Map();
+  let nativeCancelled = 0, nextTimer = 0;
+  class FakeAudio {
+    constructor() { this.paused = true; this.pauseCalls = 0; this.playCalls = 0; audios.push(this); }
+    play() {
+      this.playCalls += 1;
+      if (audioThrows) throw new Error('play throws');
+      if (audioReject) return Promise.reject(new Error('NotAllowedError'));
+      this.paused = false;
+      return Promise.resolve();
+    }
+    pause() { this.paused = true; this.pauseCalls += 1; }
+    removeAttribute(key) { if (key === 'src') this.src = ''; }
+    load() {}
+  }
+  const native = { cancel: () => { nativeCancelled += 1; }, clearError: () => {},
+    speak: (...arguments_) => spoken.push(arguments_) };
+  const controller = v5CreateAudioController({ getNative: () => native,
+    fetcher: (...arguments_) => { fetches.push(arguments_); return fetcher(...arguments_); },
+    makeAudio: () => new FakeAudio(), onState: state => states.push({ ...state }), cache,
+    setTimer: (callback, ms) => { const id = ++nextTimer; timers.set(id, { callback, ms }); return id; },
+    clearTimer: id => timers.delete(id) });
+  return { controller, states, fetches, spoken, audios, timers, cache,
+    get nativeCancelled() { return nativeCancelled; },
+    fire(ms) { const item = [...timers.entries()].find(([, value]) => value.ms === ms); assert.ok(item, `timer ${ms} exists`); timers.delete(item[0]); item[1].callback(); } };
+}
+
+(async () => {
+  assert.equal(v5ReadAudioPreference(), 'device');
+  v5SaveAudioPreference('dictionary-us');
+  assert.equal(v5ReadAudioPreference(), 'dictionary-us');
+  v5SaveAudioPreference('malicious');
+  assert.equal(v5ReadAudioPreference(), 'dictionary-us');
+  data.set('listen-write-audio-source-v5', 'unknown');
+  assert.equal(v5ReadAudioPreference(), 'device');
+  context.localStorage = { getItem() { throw new Error('storage disabled'); }, setItem() { throw new Error('storage disabled'); } };
+  assert.equal(v5ReadAudioPreference(), 'device');
+  assert.doesNotThrow(() => v5SaveAudioPreference('dictionary-uk'));
+  pass('source preference, invalid stored value and unavailable storage');
+
+  assert.equal(v5AudioWord('  ＨＥＬＬＯ  '), 'hello');
+  assert.equal(v5AudioWord('don’t'), "don't");
+  assert.equal(v5AudioWord('look   after'), 'look after');
+  assert.equal(v5AudioWord('中文'), '');
+  assert.equal(v5AudioWord('hello?'), '');
+  assert.equal(v5AudioWord('a'.repeat(81)), '');
+  pass('English request validation and normalized word');
+
+  assert.equal(v5AudioUrl('https://api.dictionaryapi.dev/media/pronunciations/en/hello-us.mp3', 'api.dictionaryapi.dev', '/media/pronunciations/en/'), recording().audio);
+  for (const url of ['http://api.dictionaryapi.dev/media/pronunciations/en/a.mp3',
+    'https://api.dictionaryapi.dev.evil.test/media/pronunciations/en/a.mp3',
+    'https://user@api.dictionaryapi.dev/media/pronunciations/en/a.mp3',
+    'https://api.dictionaryapi.dev:8443/media/pronunciations/en/a.mp3',
+    'https://api.dictionaryapi.dev/other/a.mp3', 'javascript:alert(1)'])
+    assert.equal(v5AudioUrl(url, 'api.dictionaryapi.dev', '/media/pronunciations/en/'), '');
+  pass('audio/source URL validation excludes untrusted hosts and credentials');
+
+  const both = v5RecordingCandidates(payload(), 'HELLO');
+  assert.equal(both.length, 2);
+  assert.equal(both[0].accent, 'us');
+  assert.equal(both[1].accent, 'uk');
+  assert.equal(v5RecordingCandidates(payload('wrong'), 'hello').length, 0);
+  const duplicate = payload(); duplicate[0].phonetics.push(recording());
+  assert.equal(v5RecordingCandidates(duplicate, 'hello').length, 2);
+  for (const changed of [{ audio: 'https://other.test/hello-us.mp3' },
+    { sourceUrl: 'https://other.test/hello' }, { license: { name: 'unknown', url: 'https://other.test/license' } },
+    { audio: 'https://api.dictionaryapi.dev/media/pronunciations/en/hello-au.mp3' }])
+    assert.equal(v5RecordingCandidates([{ word: 'hello', phonetics: [{ ...recording(), ...changed }] }], 'hello').length, 0);
+  const gb = [{ word: 'hello', phonetics: [recording('hello', 'gb')] }];
+  assert.equal(v5RecordingCandidates(gb, 'hello')[0].accent, 'uk');
+  pass('recordings require exact word, trusted credit, matching US/UK and no duplicates');
+
+  {
+    const h = harness();
+    const work = h.controller.speak('device', 'hello', 'en-US', 0.8, null, null, 'chosen');
+    assert.equal(h.spoken.length, 1, 'device begins synchronously for a user gesture');
+    await work;
+    assert.equal(h.fetches.length, 0);
+    assert.equal(h.spoken[0][5], 'chosen');
+    assert.equal(h.spoken[0][2], 0.8);
+    pass('device source speaks synchronously and never queries dictionary');
+  }
+  {
+    const h = harness();
+    await h.controller.speak('dictionary-us', '你好', 'zh-CN', 0.7, null, null, 'chinese');
+    assert.equal(h.fetches.length, 0);
+    assert.equal(h.spoken[0][1], 'zh-CN');
+    assert.equal(h.spoken[0][5], 'chinese');
+    pass('Chinese uses selected device voice even with an online English source');
+  }
+  {
+    const h = harness({ fetcher: async () => response(payload("don't")) });
+    await h.controller.speak('dictionary-us', "don't", 'en-US', 0.7);
+    assert.equal(h.fetches.length, 1);
+    assert.equal(h.fetches[0][0], 'https://api.dictionaryapi.dev/api/v2/entries/en/don%27t');
+    assert.equal(h.fetches[0][1].credentials, 'omit');
+    assert.equal(h.fetches[0][1].referrerPolicy, 'no-referrer');
+    assert.equal(Object.keys(h.fetches[0][1]).sort().join(','), 'credentials,referrerPolicy,signal');
+    assert.equal(h.audios[0].playbackRate, 0.7);
+    assert.equal(h.audios[0].preservesPitch, true);
+    h.controller.cancel();
+    pass('online sends only the encoded word and uses pitch-preserving slow playback');
+  }
+  {
+    const h = harness(); let ended = 0;
+    await h.controller.speak('dictionary-us', 'hello', 'en-GB', 1, () => { ended += 1; });
+    assert.equal(h.spoken.length, 0);
+    assert.match(h.audios[0].src, /hello-us\.mp3$/);
+    assert.equal(h.controller.getState().loading, true);
+    h.audios[0].onplaying();
+    assert.equal(h.controller.getState().loading, false);
+    assert.equal(h.controller.getState().speaking, true);
+    assert.equal(h.controller.getState().recording.accent, 'us');
+    h.audios[0].onended(); h.audios[0].onended();
+    assert.equal(ended, 1);
+    assert.equal(h.controller.getState().speaking, false);
+    assert.equal(h.timers.size, 0);
+    await h.controller.speak('dictionary-uk', 'hello', 'en-US', 1);
+    assert.match(h.audios[1].src, /hello-uk\.mp3$/);
+    assert.equal(h.fetches.length, 1, 'one tab reuses exact-word metadata for the other accent');
+    h.controller.cancel();
+    pass('US/UK source overrides device accent, caches metadata and completes once');
+  }
+  {
+    const h = harness({ fetcher: async () => response(payload('hello', ['uk'])) });
+    await h.controller.speak('dictionary-us', 'hello', 'en-GB', 1, null, null, 'wrong-accent-voice');
+    assert.equal(h.audios.length, 0);
+    assert.equal(h.spoken.length, 1);
+    assert.equal(h.spoken[0][1], 'en-US');
+    assert.equal(h.spoken[0][5], 'auto');
+    assert.match(h.controller.getState().notice, /没有找到可用的美式录音/);
+    pass('missing selected accent falls back honestly without substituting another recording');
+  }
+  {
+    const h = harness({ fetcher: async () => ({ ok: false, json: async () => payload() }) });
+    await h.controller.speak('dictionary-uk', 'hello', 'en-US', 1);
+    assert.equal(h.spoken[0][1], 'en-GB');
+    assert.match(h.controller.getState().notice, /在线录音暂时不可用/);
+    assert.equal(h.cache.size, 0);
+    pass('failed request uses device fallback and does not cache failure');
+  }
+  {
+    const wait = deferred(); const h = harness({ fetcher: () => wait.promise });
+    const work = h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    h.fire(6000); await work;
+    assert.equal(h.fetches[0][1].signal.aborted, true);
+    assert.equal(h.spoken.length, 1);
+    wait.resolve(response(payload())); await settle();
+    assert.equal(h.audios.length, 0, 'late network response must never start audio');
+    assert.equal(h.spoken.length, 1);
+    assert.equal(h.cache.size, 0);
+    pass('timeout falls back even when fetch ignores abort and late results stay silent');
+  }
+  {
+    const wait = deferred(); const h = harness({ fetcher: () => wait.promise }); let ended = 0;
+    const work = h.controller.speak('dictionary-us', 'hello', 'en-US', 1, () => ended++);
+    h.controller.cancel(); await work;
+    assert.equal(h.fetches[0][1].signal.aborted, true);
+    assert.equal(h.timers.size, 0);
+    wait.resolve(response(payload())); await settle();
+    assert.equal(h.spoken.length, 0);
+    assert.equal(h.audios.length, 0);
+    assert.equal(ended, 0);
+    assert.equal(h.controller.getState().loading, false);
+    pass('cancel during lookup aborts and never falls back or calls completion');
+  }
+  {
+    const first = deferred(); const h = harness({ fetcher: url => url.endsWith('/hello') ? first.promise : Promise.resolve(response(payload('bank'))) });
+    const old = h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    await h.controller.speak('dictionary-uk', 'bank', 'en-US', 1);
+    first.resolve(response(payload())); await old; await settle();
+    assert.equal(h.audios.length, 1);
+    assert.match(h.audios[0].src, /bank-uk\.mp3$/);
+    assert.equal(h.cache.has('hello'), false);
+    h.controller.cancel();
+    pass('rapidly switching word/source suppresses stale audio and cache writes');
+  }
+  for (const audioOptions of [{ audioReject: true }, { audioThrows: true }]) {
+    const h = harness(audioOptions); let ended = 0;
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1, () => ended++); await settle();
+    assert.equal(h.spoken.length, 1);
+    assert.equal(h.audios[0].paused, true);
+    assert.match(h.controller.getState().notice, /这段录音未能播放/);
+    assert.equal(h.controller.getState().recording, null);
+    h.spoken[0][3](); h.spoken[0][3](); assert.equal(ended, 1);
+    pass(audioOptions.audioReject ? 'autoplay rejection falls back and completes once' : 'synchronous media error falls back and cleans up');
+  }
+  {
+    const h = harness();
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    h.fire(6000);
+    assert.equal(h.spoken.length, 1);
+    assert.equal(h.audios[0].onplaying, null);
+    assert.equal(h.audios[0].paused, true);
+    pass('recording load/start timeout clears media before device fallback');
+  }
+  {
+    const h = harness();
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    h.audios[0].onplaying(); h.fire(30000);
+    assert.equal(h.spoken.length, 1);
+    assert.equal(h.audios[0].paused, true);
+    pass('a recording that never finishes cannot stall paper dictation');
+  }
+  {
+    const h = harness(); let ended = 0;
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1, () => ended++);
+    const staleEnd = h.audios[0].onended, staleError = h.audios[0].onerror;
+    h.controller.cancel(); staleEnd(); staleError();
+    assert.equal(ended, 0);
+    assert.equal(h.spoken.length, 0);
+    assert.equal(h.audios[0].paused, true);
+    assert.equal(h.audios[0].src, '');
+    assert.equal(h.timers.size, 0);
+    assert.equal(h.controller.getState().recording.accent, 'us');
+    pass('cancel after playback stops media and suppresses stale media events');
+  }
+  {
+    const h = harness();
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    h.audios[0].onplaying();
+    h.controller.cancel();
+    const speech = { ...h.controller.getState(), sourceLabel: '在线词典 · 美式录音' };
+    assert.ok(speech.recording, 'grading preserves the heard recording metadata');
+    const hidden = JSON.stringify(V5AudioStatus({ speech }));
+    assert.equal(hidden.includes('wikimedia.org'), false);
+    assert.equal(hidden.includes('hello'), false, 'ungraded status cannot reveal the word via URL');
+    const revealed = JSON.stringify(V5AudioStatus({ speech, showCredits: true }));
+    assert.equal(revealed.includes('wikimedia.org'), true);
+    assert.equal(revealed.includes('creativecommons.org'), true);
+    h.controller.cancel(true);
+    assert.equal(h.controller.getState().recording, null, 'switching resource clears old credit');
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    await h.controller.speak('device', 'bank', 'en-US', 1);
+    assert.equal(h.controller.getState().recording, null, 'new playback clears previous word metadata');
+    pass('grading keeps attribution; ungraded status hides URLs; new playback clears old credit');
+  }
+  {
+    const h = harness({ fetcher: async url => response(payload(decodeURIComponent(url.split('/').pop()))) });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(h.controller.getState().recordingsUsed.length, 0, 'loading does not count as a played recording');
+    assert.equal(V5AudioCredits({ speech: h.controller.getState() }), null);
+    h.audios[0].onplaying(); h.audios[0].onplaying();
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    h.audios[1].onplaying();
+    assert.equal(h.controller.getState().recordingsUsed.length, 1, 'repeats share one credit');
+    await h.controller.speak('dictionary-uk', 'bank', 'en-US', 1);
+    h.audios[2].onplaying(); h.controller.cancel();
+    const credits = h.controller.getState().recordingsUsed;
+    assert.equal(credits.length, 2);
+    assert.equal(credits[0].accent, 'us');
+    assert.equal(credits[1].accent, 'uk');
+    const rendered = JSON.stringify(V5AudioCredits({ speech: h.controller.getState() }));
+    assert.equal(rendered.includes('En-us-hello'), true);
+    assert.equal(rendered.includes('En-uk-bank'), true);
+    pass('paper-round credits include every actually played recording and deduplicate repeats');
+  }
+  {
+    const h = harness();
+    await h.controller.speak('dictionary-us', 'hello?', 'en-US', 1);
+    assert.equal(h.fetches.length, 0);
+    assert.equal(h.spoken.length, 1);
+    h.controller.clearError(); assert.equal(h.controller.getState().notice, '');
+    pass('unsupported content is spoken locally without a network query');
+  }
+  {
+    const cache = new Map(Array.from({ length: 120 }, (_, i) => [`word-${i}`, []]));
+    const h = harness({ cache });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(cache.size, 120);
+    assert.equal(cache.has('word-0'), false);
+    assert.equal(cache.has('hello'), true);
+    h.controller.cancel();
+    pass('recording metadata cache is bounded to 120 words in memory');
+  }
+  console.log(JSON.stringify({ success: true, checks: passed.length, passed }, null, 2));
+})().catch(error => { console.error(error); process.exitCode = 1; });
