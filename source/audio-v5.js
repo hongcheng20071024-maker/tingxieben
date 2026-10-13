@@ -2,6 +2,20 @@
 const V5_AUDIO_KEY = 'listen-write-audio-source-v5';
 const V5_AUDIO_SOURCES = ['device', 'dictionary-us', 'dictionary-uk'];
 const V5_AUDIO_CACHE = new Map();
+const V5_AUDIO_FAILURES = new Map();
+
+function v5InitialAudioState() {
+  return { speaking: false, loading: false, phase: 'idle', actualSource: '', notice: '',
+    recording: null, recordingsUsed: [], retryAvailable: false };
+}
+
+function v5AudioSourceLabel(source) {
+  return source === 'dictionary-us' ? '在线词典 · 美式录音'
+    : source === 'dictionary-uk' ? '在线词典 · 英式录音'
+    : source === 'device-zh' ? '设备中文语音'
+    : source === 'device-en' ? '设备英语语音'
+    : source === 'other-recording' ? '其他收录录音' : '设备语音';
+}
 
 function v5AudioSource(value) {
   return V5_AUDIO_SOURCES.includes(value) ? value : 'device';
@@ -68,14 +82,16 @@ function v5RecordingCandidates(data, word) {
 /* Dependency injection keeps cancellation, stale responses and fallback testable. */
 function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
   setTimer = setTimeout, clearTimer = clearTimeout, makeAbort = () => new AbortController(),
-  cache = V5_AUDIO_CACHE, requestTimeout = 6000, startTimeout = 6000, playbackTimeout = 30000 }) {
+  cache = V5_AUDIO_CACHE, failures = V5_AUDIO_FAILURES, now = () => Date.now(), cooldown = 30000,
+  requestTimeout = 6000, startTimeout = 6000, playbackTimeout = 30000 }) {
   let generation = 0;
   let request = null;
   let media = null;
   let deadline = null;
   let requestDeadline = null;
   let pendingReject = null;
-  let state = { speaking: false, loading: false, notice: '', recording: null, recordingsUsed: [] };
+  let lastRequest = null;
+  let state = v5InitialAudioState();
 
   const update = values => { state = { ...state, ...values }; onState?.(state); };
   const clearDeadline = () => { if (deadline !== null) clearTimer(deadline); deadline = null; };
@@ -105,8 +121,9 @@ function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
     getNative().cancel();
     // Grading stops playback, but keeps the heard recording's credit available.
     // A new playback or source selection clears it before another word is loaded.
-    update({ speaking: false, loading: false,
-      ...(clearRecording === true ? { notice: '', recording: null } : {}) });
+    if (clearRecording === true) lastRequest = null;
+    update({ speaking: false, loading: false, phase: state.phase === 'idle' ? 'idle' : 'stopped',
+      ...(clearRecording === true ? { notice: '', recording: null, actualSource: '', retryAvailable: false } : {}) });
   }
 
   function clearError() {
@@ -114,7 +131,7 @@ function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
     update({ notice: '' });
   }
 
-  async function speak(sourceValue, text, language, rate, onEnd, onError, voice = 'auto') {
+  async function speak(sourceValue, text, language, rate, onEnd, onError, voice = 'auto', options = {}) {
     cancel(true);
     getNative().clearError();
     const current = generation;
@@ -122,6 +139,8 @@ function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
     const english = /^en(?:-|$)/i.test(language || '');
     const word = v5AudioWord(text);
     const accent = source === 'dictionary-uk' ? 'uk' : 'us';
+    const failureKey = `${source}:${word}`;
+    lastRequest = { source, text, language, rate, voice };
     let delivered = false;
     const deliver = callback => {
       if (generation !== current || delivered) return;
@@ -131,14 +150,42 @@ function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
     const native = (notice = '') => {
       if (generation !== current) return;
       stopMedia();
-      update({ speaking: false, loading: false, notice, recording: null });
+      update({ speaking: false, loading: false, phase: 'starting',
+        actualSource: english ? 'device-en' : /^zh(?:-|$)/i.test(language || '') ? 'device-zh' : 'device',
+        notice, recording: null, retryAvailable: Boolean(notice && word && english && source !== 'device') });
       const fallbackLanguage = source === 'device' || !english ? language : accent === 'uk' ? 'en-GB' : 'en-US';
-      getNative().speak(text, fallbackLanguage, rate, () => deliver(onEnd), () => deliver(onError),
-        source === 'device' || !english ? voice : 'auto');
+      getNative().speak(text, fallbackLanguage, rate, () => {
+        if (generation !== current || delivered) return;
+        update({ speaking: false, loading: false, phase: 'ended' });
+        deliver(onEnd);
+      }, () => {
+        if (generation !== current || delivered) return;
+        update({ speaking: false, loading: false, phase: 'error' });
+        deliver(onError);
+      }, source === 'device' || !english ? voice : 'auto', () => {
+        if (generation === current && !delivered) update({ speaking: true, phase: 'playing' });
+      });
     };
     if (source === 'device' || !english) { native(); return; }
     if (!word) { native('这个内容暂不支持词典录音，已改用设备英语发音。'); return; }
-    update({ loading: true, notice: '', recording: null });
+    const fail = notice => {
+      if (generation !== current) return;
+      for (const [key, value] of failures) if (value.until <= now()) failures.delete(key);
+      if (!failures.has(failureKey) && failures.size >= 120) failures.delete(failures.keys().next().value);
+      failures.set(failureKey, { until: now() + cooldown, notice });
+      native(notice);
+    };
+    const previousFailure = failures.get(failureKey);
+    if (!options.force && previousFailure && previousFailure.until > now()) {
+      native(previousFailure.notice);
+      return;
+    }
+    // Expired failures and explicit retries refresh metadata as the provider may now have a recording.
+    if (options.force || previousFailure) {
+      failures.delete(failureKey);
+      cache.delete(word);
+    }
+    update({ loading: true, phase: 'loading', actualSource: source, notice: '', recording: null });
 
     let recordings;
     try {
@@ -175,18 +222,18 @@ function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
       clearRequestDeadline();
       pendingReject = null;
       request = null;
-      native('在线录音暂时不可用，已改用设备英语发音；可点击“重听”重试。');
+      fail('在线录音暂时不可用，已改用设备英语发音。');
       return;
     }
     if (generation !== current) return;
     const recording = recordings.find(item => item.accent === accent);
     if (!recording) {
-      native(`没有找到可用的${accent === 'uk' ? '英式' : '美式'}录音，已改用设备英语发音。`);
+      fail(`没有找到可用的${accent === 'uk' ? '英式' : '美式'}录音，已改用设备英语发音。`);
       return;
     }
     const fallback = () => {
       if (generation !== current || delivered || media !== audio) return;
-      native('这段录音未能播放，已改用设备英语发音；可点击“重听”重试。');
+      fail('这段录音未能播放，已改用设备英语发音。');
     };
     let audio;
     try {
@@ -197,36 +244,58 @@ function v5CreateAudioController({ getNative, fetcher, makeAudio, onState,
       audio.playbackRate = Math.max(0.5, Math.min(1.5, Number(rate) || 1));
       audio.preservesPitch = true;
       audio.onplaying = () => {
-        if (generation !== current || media !== audio) return;
+        if (generation !== current || delivered || media !== audio) return;
         clearDeadline();
         const recordingsUsed = state.recordingsUsed.some(item => item.audio === recording.audio)
           ? state.recordingsUsed : [...state.recordingsUsed, recording];
-        update({ speaking: true, loading: false, notice: '', recording, recordingsUsed });
+        failures.delete(failureKey);
+        update({ speaking: true, loading: false, phase: 'playing', actualSource: source,
+          notice: '', recording, recordingsUsed, retryAvailable: false });
         deadline = setTimer(fallback, playbackTimeout);
       };
       audio.onended = () => {
         if (generation !== current || media !== audio) return;
         clearDeadline();
-        update({ speaking: false, loading: false, notice: '', recording });
+        update({ speaking: false, loading: false, phase: 'ended', notice: '' });
         deliver(onEnd);
       };
       audio.onerror = fallback;
-      update({ speaking: true, loading: true, notice: '', recording });
+      update({ speaking: false, loading: true, phase: 'starting', notice: '', recording: null });
       deadline = setTimer(fallback, startTimeout);
       const playback = audio.play();
       if (playback && typeof playback.catch === 'function') playback.catch(fallback);
     } catch (_) {
-      native('这段录音未能播放，已改用设备英语发音；可点击“重听”重试。');
+      fail('这段录音未能播放，已改用设备英语发音。');
     }
   }
-  return { speak, cancel, clearError, getState: () => state };
+  function retry() {
+    if (!state.retryAvailable || !lastRequest) return;
+    const { source, text, language, rate, voice } = lastRequest;
+    // A manual replay must not repeat a paper sequence's completion/advance callback.
+    return speak(source, text, language, rate, undefined, undefined, voice, { force: true });
+  }
+  function externalStart() {
+    cancel(true);
+    getNative().clearError();
+    update({ phase: 'starting', actualSource: 'other-recording' });
+    return generation;
+  }
+  function externalPlaying(token) {
+    if (token === generation && state.actualSource === 'other-recording')
+      update({ speaking: true, phase: 'playing' });
+  }
+  function externalEnd(token, failed = false, paused = false) {
+    if (token === generation && state.actualSource === 'other-recording')
+      update({ speaking: false, phase: failed ? 'error' : paused ? 'stopped' : 'ended' });
+  }
+  return { speak, cancel, clearError, retry, externalStart, externalPlaying, externalEnd, getState: () => state };
 }
 
 function v5UseSpeech(source = 'device') {
   const native = bg();
   const nativeRef = (0, G.useRef)(native);
   nativeRef.current = native;
-  const [state, setState] = (0, G.useState)({ speaking: false, loading: false, notice: '', recording: null, recordingsUsed: [] });
+  const [state, setState] = (0, G.useState)(v5InitialAudioState);
   const controller = (0, G.useRef)(null);
   if (!controller.current) controller.current = v5CreateAudioController({
     getNative: () => nativeRef.current,
@@ -235,6 +304,10 @@ function v5UseSpeech(source = 'device') {
   });
   const cancel = (0, G.useCallback)(() => controller.current.cancel(), []);
   const clearError = (0, G.useCallback)(() => controller.current.clearError(), []);
+  const retry = (0, G.useCallback)(() => controller.current.retry(), []);
+  const externalStart = (0, G.useCallback)(() => controller.current.externalStart(), []);
+  const externalPlaying = (0, G.useCallback)(token => controller.current.externalPlaying(token), []);
+  const externalEnd = (0, G.useCallback)((token, failed, paused) => controller.current.externalEnd(token, failed, paused), []);
   const speak = (0, G.useCallback)((...arguments_) => controller.current.speak(source, ...arguments_), [source]);
   (0, G.useEffect)(() => { controller.current.cancel(true); }, [source]);
   (0, G.useEffect)(() => {
@@ -249,8 +322,8 @@ function v5UseSpeech(source = 'device') {
   }, [cancel]);
   return { ...native, ...state, error: state.recording && !state.notice ? '' : native.error,
     speaking: native.speaking || state.speaking || state.loading,
-    speak, cancel, clearError, sourceLabel: source === 'dictionary-us' ? '在线词典 · 美式录音'
-      : source === 'dictionary-uk' ? '在线词典 · 英式录音' : '设备语音' };
+    speak, cancel, clearError, retry, externalStart, externalPlaying, externalEnd,
+    sourceLabel: v5AudioSourceLabel(source) };
 }
 
 function V5AudioSetting({ source, onChange, onPreview }) {
@@ -279,12 +352,19 @@ function V5AudioSetting({ source, onChange, onPreview }) {
   });
 }
 
-function V5AudioStatus({ speech, showCredits = false }) {
+function V5AudioStatus({ speech, showCredits = false, allowRetry = true }) {
   const credit = showCredits && speech.recording;
-  if (!speech.loading && !speech.notice && !credit && speech.sourceLabel === '设备语音') return null;
+  const phase = speech.phase || 'idle';
+  const sourceLabel = speech.actualSource ? v5AudioSourceLabel(speech.actualSource) : speech.sourceLabel;
+  const phaseLabel = phase === 'loading' ? '正在查询录音…' : phase === 'starting' ? '正在准备播放…'
+    : phase === 'playing' ? '正在播放' : phase === 'ended' ? '播放结束'
+    : phase === 'stopped' ? '已停止' : phase === 'error' ? '未能播放，请重听' : '等待播放';
+  if (phase === 'idle' && !speech.notice && !credit && speech.sourceLabel === '设备语音') return null;
   return (0, y.jsxs)('div', { className: 'v5-audio-status', children: [
-    (0, y.jsx)('p', { role: 'status', children: speech.loading ? '正在加载在线录音…'
-      : speech.notice || (speech.recording ? `${speech.sourceLabel} · 本词录音已就绪` : `${speech.sourceLabel} · 等待播放`) }),
+    (0, y.jsx)('p', { role: 'status', children: `${sourceLabel} · ${phaseLabel}` }),
+    speech.notice && (0, y.jsx)('p', { className: 'v5-audio-notice', children: speech.notice }),
+    allowRetry && speech.retryAvailable && speech.retry && (0, y.jsx)('button', {
+      type: 'button', className: 'v5-audio-retry', onClick: speech.retry, children: '重试在线录音' }),
     credit && (0, y.jsxs)('p', { className: 'v5-audio-credit', children: [
       (0, y.jsx)('a', { href: credit.source, target: '_blank', rel: 'noopener noreferrer', children: '录音来源与作者' }),
       ' · ', (0, y.jsx)('a', { href: credit.licenseUrl, target: '_blank', rel: 'noopener noreferrer', children: credit.licenseName }),

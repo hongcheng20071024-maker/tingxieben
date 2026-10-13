@@ -238,5 +238,105 @@
     "name": "session actual audio source and optional credits",
     "old": "(0,y.jsxs)(\"p\",{className:\"voice-note\",children:[Be?`\\u63D0\\u793A\\u97F3\\u8272\\uFF1A${Be.name||de} \\xB7 ${Be.lang}${Be.localService?\"\":\" \\xB7 \\u9700\\u8054\\u7F51\"}`:`${de}\\u58F0\\u97F3\\u7531\\u7CFB\\u7EDF\\u63D0\\u4F9B\\uFF1B\\u65E0\\u58F0\\u65F6\\u8BF7\\u68C0\\u67E5\\u8BBE\\u5907\\u7684${de}\\u8BED\\u97F3\\u8BBE\\u7F6E\\u3002`,m&&l.cue===\"chinese\"&&(0,y.jsx)(\"span\",{className:\"answer-voice-note\",children:\"\\u7B54\\u6848\\u53D1\\u97F3\\u4F7F\\u7528\\u6240\\u9009\\u82F1\\u6587\\u97F3\\u8272\"})]})",
     "new": "(0,y.jsx)(V5AudioStatus,{speech:N,showCredits:m}),(!l.audioSource||l.audioSource===\"device\"||l.cue===\"chinese\")&&(0,y.jsxs)(\"p\",{className:\"voice-note\",children:[Be?`\\u63D0\\u793A\\u97F3\\u8272\\uFF1A${Be.name||de} \\xB7 ${Be.lang}${Be.localService?\"\":\" \\xB7 \\u9700\\u8054\\u7F51\"}`:`${de}\\u58F0\\u97F3\\u7531\\u7CFB\\u7EDF\\u63D0\\u4F9B\\uFF1B\\u65E0\\u58F0\\u65F6\\u8BF7\\u68C0\\u67E5\\u8BBE\\u5907\\u7684${de}\\u8BED\\u97F3\\u8BBE\\u7F6E\\u3002`,m&&l.cue===\"chinese\"&&(0,y.jsx)(\"span\",{className:\"answer-voice-note\",children:\"\\u7B54\\u6848\\u53D1\\u97F3\\u4F7F\\u7528\\u6240\\u9009\\u82F1\\u6587\\u97F3\\u8272\"})]})"
+  },
+  {
+    "name": "move device voice controls out of primary settings",
+    "old": "(0,y.jsx)(Ir,{label:\"\\u81EA\\u52A8\\u9009\\u62E9\\u65F6\\u7684\\u82F1\\u8BED\\u53E3\\u97F3\",value:r.accent,change:E=>N(\"accent\",E),items:[[\"en-US\",\"\\u7F8E\\u5F0F\\u4F18\\u5148\"],[\"en-GB\",\"\\u82F1\\u5F0F\\u4F18\\u5148\"]]}),(0,y.jsx)(Ir,{label:\"\\u82F1\\u6587\\u97F3\\u8272\",value:r.englishVoice||\"auto\",change:E=>{g.cancel(),N(\"englishVoice\",E)},items:em(g.voices,\"en\",r.englishVoice)}),r.cue===\"chinese\"&&(0,y.jsx)(Ir,{label:\"\\u4E2D\\u6587\\u97F3\\u8272\",value:r.chineseVoice||\"auto\",change:E=>{g.cancel(),N(\"chineseVoice\",E)},items:em(g.voices,\"zh\",r.chineseVoice)}),",
+    "new": ""
+  },
+  {
+    "name": "fold voice choices together with resource help",
+    "old": "(0,y.jsxs)(\"details\",{className:\"voice-resources\",children:[(0,y.jsx)(\"summary\",{children:\"\\u66F4\\u591A\\u58F0\\u97F3\\u4E0E\\u8BED\\u97F3\\u5305\"}),(0,y.jsx)(\"p\",{children:\"\\u97F3\\u8272\\u5217\\u8868\\u663E\\u793A\\u5F53\\u524D\\u6D4F\\u89C8\\u5668\\u53EF\\u7528\\u7684\\u58F0\\u97F3\\u3002\\u9009\\u5B9A\\u82F1\\u6587\\u97F3\\u8272\\u540E\\uFF0C\\u4F1A\\u540C\\u65F6\\u7528\\u4E8E\\u82F1\\u6587\\u542C\\u5199\\u548C\\u7B54\\u6848\\u53D1\\u97F3\\uFF1B\\u9009\\u62E9\\u201C\\u81EA\\u52A8\\u9009\\u62E9\\u201D\\u65F6\\u4F18\\u5148\\u4F7F\\u7528\\u4E0A\\u65B9\\u53E3\\u97F3\\u3002\"}),(0,y.jsx)(\"p\",{children:\"\\u53EF\\u4EE5\\u5148\\u5728\\u7CFB\\u7EDF\\u4E2D\\u6DFB\\u52A0\\u8BED\\u97F3\\u5305\\uFF0C\\u518D\\u5237\\u65B0\\u6B64\\u9875\\u3002\\u4E0D\\u540C\\u8BBE\\u5907\\u548C\\u6D4F\\u89C8\\u5668\\u63D0\\u4F9B\\u7684\\u58F0\\u97F3\\u53EF\\u80FD\\u4E0D\\u540C\\uFF0C\\u4E0B\\u8F7D\\u540E\\u4EE5\\u5217\\u8868\\u5B9E\\u9645\\u663E\\u793A\\u4E3A\\u51C6\\uFF1B\\u6807\\u8BB0\\u201C\\u8054\\u7F51\\u201D\\u7684\\u58F0\\u97F3\\u9700\\u8981\\u7F51\\u7EDC\\u3002\"}),(0,y.jsxs)(\"div\",{className:\"voice-resource-links\",children:[(0,y.jsx)(\"a\",{href:\"https://support.apple.com/en-gb/111798\",target:\"_blank\",rel:\"noopener noreferrer\",children:\"iPad / iPhone \\u6DFB\\u52A0\\u58F0\\u97F3 \\u2197\"}),(0,y.jsx)(\"a\",{href:\"https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-a-supported-languages-and-voices\",target:\"_blank\",rel:\"noopener noreferrer\",children:\"Windows \\u6DFB\\u52A0\\u58F0\\u97F3 \\u2197\"})]})]})",
+    "new": "(0,y.jsxs)(\"details\",{className:\"voice-resources v5-advanced-voice\",children:[(0,y.jsx)(\"summary\",{children:\"更多发音设置\"}),(0,y.jsxs)(\"div\",{className:\"settings\",children:[(0,y.jsx)(Ir,{label:\"\\u81EA\\u52A8\\u9009\\u62E9\\u65F6\\u7684\\u82F1\\u8BED\\u53E3\\u97F3\",value:r.accent,change:E=>N(\"accent\",E),items:[[\"en-US\",\"\\u7F8E\\u5F0F\\u4F18\\u5148\"],[\"en-GB\",\"\\u82F1\\u5F0F\\u4F18\\u5148\"]]}),(0,y.jsx)(Ir,{label:\"\\u82F1\\u6587\\u97F3\\u8272\",value:r.englishVoice||\"auto\",change:E=>{g.cancel(),N(\"englishVoice\",E)},items:em(g.voices,\"en\",r.englishVoice)}),r.cue===\"chinese\"&&(0,y.jsx)(Ir,{label:\"\\u4E2D\\u6587\\u97F3\\u8272\",value:r.chineseVoice||\"auto\",change:E=>{g.cancel(),N(\"chineseVoice\",E)},items:em(g.voices,\"zh\",r.chineseVoice)})]}),(0,y.jsx)(\"p\",{children:\"设备英语音色用于设备发音；选择自动时优先使用这里的口音。在线录音以所选美式或英式资源为准，回退时自动选择对应口音的设备声音。中文始终使用设备中文音色。\"}),(0,y.jsx)(\"p\",{children:\"\\u53EF\\u4EE5\\u5148\\u5728\\u7CFB\\u7EDF\\u4E2D\\u6DFB\\u52A0\\u8BED\\u97F3\\u5305\\uFF0C\\u518D\\u5237\\u65B0\\u6B64\\u9875\\u3002\\u4E0D\\u540C\\u8BBE\\u5907\\u548C\\u6D4F\\u89C8\\u5668\\u63D0\\u4F9B\\u7684\\u58F0\\u97F3\\u53EF\\u80FD\\u4E0D\\u540C\\uFF0C\\u4E0B\\u8F7D\\u540E\\u4EE5\\u5217\\u8868\\u5B9E\\u9645\\u663E\\u793A\\u4E3A\\u51C6\\uFF1B\\u6807\\u8BB0\\u201C\\u8054\\u7F51\\u201D\\u7684\\u58F0\\u97F3\\u9700\\u8981\\u7F51\\u7EDC\\u3002\"}),(0,y.jsxs)(\"div\",{className:\"voice-resource-links\",children:[(0,y.jsx)(\"a\",{href:\"https://support.apple.com/en-gb/111798\",target:\"_blank\",rel:\"noopener noreferrer\",children:\"iPad / iPhone \\u6DFB\\u52A0\\u58F0\\u97F3 \\u2197\"}),(0,y.jsx)(\"a\",{href:\"https://support.microsoft.com/en-us/accessibility/windows/narrator/appendix-a-supported-languages-and-voices\",target:\"_blank\",rel:\"noopener noreferrer\",children:\"Windows \\u6DFB\\u52A0\\u58F0\\u97F3 \\u2197\"})]})]})"
+  },
+  {
+    "name": "source preview alongside selected resource",
+    "old": "(0,y.jsx)(V5AudioSetting,{source:r.audioSource,onChange:E=>{g.cancel(),N(\"audioSource\",E)}})",
+    "new": "(0,y.jsx)(V5AudioSetting,{source:r.audioSource,onChange:E=>{g.cancel(),N(\"audioSource\",E)},onPreview:()=>g.speak(\"hello\",r.accent,Number(r.rate),void 0,void 0,r.englishVoice)})"
+  },
+  {
+    "name": "one English preview with optional Chinese preview",
+    "old": "(0,y.jsxs)(\"div\",{className:\"voice-previews\",children:[(0,y.jsxs)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>g.speak(\"hello\",r.accent,Number(r.rate),void 0,void 0,r.englishVoice),children:[(0,y.jsx)(lo,{size:16}),\"试听发音资源\"]}),r.cue===\"chinese\"&&(0,y.jsxs)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>g.speak(\"\\u4F60\\u597D\",\"zh-CN\",Number(r.rate),void 0,void 0,r.chineseVoice),children:[(0,y.jsx)(lo,{size:16}),\"\\u8BD5\\u542C\\u4E2D\\u6587\"]})]})",
+    "new": "r.cue===\"chinese\"&&(0,y.jsx)(\"div\",{className:\"voice-previews\",children:(0,y.jsxs)(\"button\",{type:\"button\",className:\"text-action\",onClick:()=>g.speak(\"你好\",\"zh-CN\",Number(r.rate),void 0,void 0,r.chineseVoice),children:[(0,y.jsx)(lo,{size:16}),\"试听中文\"]})})"
+  },
+  {
+    "name": "hide inherited rewrite control in paper mode",
+    "old": ":(0,y.jsx)(V3RewriteSetting,{enabled:r.rewriteWrong,mode:r.mode,",
+    "new": ":r.mode!==\"paper\"&&(0,y.jsx)(V3RewriteSetting,{enabled:r.rewriteWrong,mode:r.mode,"
+  },
+  {
+    "name": "collapse answered dual inputs into one feedback card",
+    "old": "children:[v5Dual&&(0,y.jsx)(V5DualInstruction,{}),v4Meaning&&(0,y.jsx)(V4MeaningNotice,{compact:true}),(0,y.jsx)(\"label\",{className:v5Dual?\"v5-answer-label\":\"sr-only\",htmlFor:\"answer\",children:v4Meaning?\"输入中文意思\":\"\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\"}),(0,y.jsx)(Si,{ref:ee,id:\"answer\",className:\"answer-input\",autoComplete:\"off\",autoCorrect:\"off\",autoCapitalize:\"none\",spellCheck:!1,lang:v4Meaning?\"zh-CN\":\"en\",inputMode:\"text\",enterKeyHint:v5Dual?\"next\":\"done\",\"aria-describedby\":v5Dual?\"dual-answer-description\":v4Meaning?\"meaning-answer-description\":void 0,placeholder:v4Meaning?\"写出任意一种中文意思\":\"\\u5728\\u8FD9\\u91CC\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\",value:s,disabled:m,onChange:j=>d(j.target.value),onFocus:()=>{v5LastField.current=\"english\"},onCompositionStart:()=>{v4Composing.current=true},onCompositionEnd:()=>{v4Composing.current=false},onBlur:()=>{v4Composing.current=false},onKeyDown:j=>{if(j.key===\"Enter\"){if(v4Composing.current||j.repeat||j.nativeEvent.isComposing||j.keyCode===229)j.preventDefault();else if(v5Dual){j.preventDefault();v5ChineseRef.current?.focus()}}}}),v5Dual&&(0,y.jsx)(V5ChineseInput,{inputRef:v5ChineseRef,value:v5Chinese,onChange:v5SetChinese,disabled:m,composing:v5ChineseComposing,lastField:v5LastField})",
+    "new": "children:[!(v5Dual&&m)&&(0,y.jsxs)(y.Fragment,{children:[v5Dual&&(0,y.jsx)(V5DualInstruction,{}),v4Meaning&&(0,y.jsx)(V4MeaningNotice,{compact:true}),(0,y.jsx)(\"label\",{className:v5Dual?\"v5-answer-label\":\"sr-only\",htmlFor:\"answer\",children:v4Meaning?\"输入中文意思\":\"\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\"}),(0,y.jsx)(Si,{ref:ee,id:\"answer\",className:\"answer-input\",autoComplete:\"off\",autoCorrect:\"off\",autoCapitalize:\"none\",spellCheck:!1,lang:v4Meaning?\"zh-CN\":\"en\",inputMode:\"text\",enterKeyHint:v5Dual?\"next\":\"done\",\"aria-describedby\":v5Dual?\"dual-answer-description\":v4Meaning?\"meaning-answer-description\":void 0,placeholder:v4Meaning?\"写出任意一种中文意思\":\"\\u5728\\u8FD9\\u91CC\\u8F93\\u5165\\u82F1\\u6587\\u62FC\\u5199\",value:s,disabled:m,onChange:j=>d(j.target.value),onFocus:()=>{v5LastField.current=\"english\"},onCompositionStart:()=>{v4Composing.current=true},onCompositionEnd:()=>{v4Composing.current=false},onBlur:()=>{v4Composing.current=false},onKeyDown:j=>{if(j.key===\"Enter\"){if(v4Composing.current||j.repeat||j.nativeEvent.isComposing||j.keyCode===229)j.preventDefault();else if(v5Dual){j.preventDefault();v5ChineseRef.current?.focus()}}}}),v5Dual&&(0,y.jsx)(V5ChineseInput,{inputRef:v5ChineseRef,value:v5Chinese,onChange:v5SetChinese,disabled:m,composing:v5ChineseComposing,lastField:v5LastField})]})"
+  },
+  {
+    "name": "keep feedback focus when replaying after grading",
+    "old": "(v5Dual&&v5LastField.current===\"meaning\"?v5ChineseRef:ee).current?.focus()",
+    "new": "!m&&(v5Dual&&v5LastField.current===\"meaning\"?v5ChineseRef:ee).current?.focus()"
+  },
+  {
+    "name": "one replay group after dual feedback",
+    "old": "(0,y.jsxs)(\"div\",{className:\"replay-actions\",children:",
+    "new": "!(v5Dual&&m)&&(0,y.jsxs)(\"div\",{className:\"replay-actions\",children:"
+  },
+  {
+    "name": "avoid duplicate verdicts beside original feedback answers",
+    "old": "(0,y.jsx)(V5DualAnswers,{record:Gn})",
+    "new": "(0,y.jsx)(V5DualAnswers,{record:Gn,compact:true})"
+  },
+  {
+    "name": "hide dual pre-answer grading note after checking",
+    "old": "(0,y.jsx)(\"p\",{className:\"paper-note\",children:v5Dual?",
+    "new": "!(v5Dual&&m)&&(0,y.jsx)(\"p\",{className:\"paper-note\",children:v5Dual?"
+  },
+  {
+    "name": "remove distant playback status",
+    "old": "(0,y.jsx)(V5AudioStatus,{speech:N,showCredits:m}),",
+    "new": ""
+  },
+  {
+    "name": "playback status near the listening controls",
+    "old": "n?(0,y.jsxs)(y.Fragment,{children:[(0,y.jsx)(\"div\",{className:\"countdown\",",
+    "new": "(0,y.jsx)(V5AudioStatus,{speech:N,showCredits:m,allowRetry:!n}),n?(0,y.jsxs)(y.Fragment,{children:[(0,y.jsx)(\"div\",{className:\"countdown\","
+  },
+  {
+    "name": "native speech start callback",
+    "old": "(c,f,m,v,S,L=\"auto\")=>",
+    "new": "(c,f,m,v,S,L=\"auto\",v5OnStart)=>"
+  },
+  {
+    "name": "native speech start confirmation",
+    "old": "g.onstart=()=>{p===u.current&&R(",
+    "new": "g.onstart=()=>{p===u.current&&v5OnStart?.();p===u.current&&R("
+  },
+  {
+    "name": "other recording lifecycle props",
+    "old": "function qR({word:e,audioRef:t,stopDevice:a,stopAll:o})",
+    "new": "function qR({word:e,audioRef:t,stopDevice:a,stopAll:o,onPlaying:v5OnPlaying,onStopped:v5OnStopped})"
+  },
+  {
+    "name": "other recording lifecycle wiring",
+    "old": "word:Ae.word,audioRef:oe,stopDevice:N.cancel,stopAll:re",
+    "new": "word:Ae.word,audioRef:oe,stopDevice:N.externalStart,stopAll:re,onPlaying:N.externalPlaying,onStopped:N.externalEnd"
+  },
+  {
+    "name": "other recording playback events",
+    "old": "src:v.audio,ref:S,onPlay:a,onError:()=>c(",
+    "new": "src:v.audio,ref:S,onPlay:h=>{h.currentTarget.__v5AudioToken=a()},onPlaying:h=>v5OnPlaying?.(h.currentTarget.__v5AudioToken),onPause:h=>v5OnStopped?.(h.currentTarget.__v5AudioToken,false,true),onEnded:h=>v5OnStopped?.(h.currentTarget.__v5AudioToken),onError:h=>{v5OnStopped?.(h.currentTarget.__v5AudioToken,true);c("
+  },
+  {
+    "name": "close other recording error handler",
+    "old": "\"\\u8FD9\\u6BB5\\u5F55\\u97F3\\u6682\\u65F6\\u65E0\\u6CD5\\u64AD\\u653E\\uFF0C\\u53EF\\u4EE5\\u6362\\u4E00\\u6BB5\\u6216\\u4F7F\\u7528\\u4E0A\\u65B9\\u7684\\u82F1\\u6587\\u53D1\\u97F3\\u3002\")},v.audio)",
+    "new": "\"\\u8FD9\\u6BB5\\u5F55\\u97F3\\u6682\\u65F6\\u65E0\\u6CD5\\u64AD\\u653E\\uFF0C\\u53EF\\u4EE5\\u6362\\u4E00\\u6BB5\\u6216\\u4F7F\\u7528\\u4E0A\\u65B9\\u7684\\u82F1\\u6587\\u53D1\\u97F3\\u3002\")}},v.audio)"
+  },
+  {
+    "name": "name optional recordings distinctly",
+    "old": "(0,it.jsx)(\"summary\",{children:\"\\u66F4\\u591A\\u53D1\\u97F3 \\xB7 \\u5728\\u7EBF\\u8BCD\\u5178\\u5F55\\u97F3\"})",
+    "new": "(0,it.jsx)(\"summary\",{children:\"其他收录录音\"})"
+  },
+  {
+    "name": "explain optional recording scope",
+    "old": "(0,it.jsx)(\"p\",{children:\"\\u70B9\\u51FB\\u540E\\u4EC5\\u5411 Free Dictionary API \\u67E5\\u8BE2\\u5F53\\u524D\\u6B63\\u786E\\u5355\\u8BCD\\uFF0C\\u52A0\\u8F7D\\u540E\\u70B9\\u64AD\\u653E\\u5668\\u64AD\\u653E\\u3002\\u5F55\\u97F3\\u548C\\u53E3\\u97F3\\u4EE5\\u5B9E\\u9645\\u6536\\u5F55\\u4E3A\\u51C6\\uFF0C\\u77ED\\u8BED\\u53EF\\u80FD\\u6CA1\\u6709\\u5F55\\u97F3\\u3002\"})",
+    "new": "(0,it.jsx)(\"p\",{children:\"Free Dictionary API 的其他收录录音；不会改变首页的默认发音资源。点击加载仅查询当前正确单词，加载后点播放器播放。录音和口音以实际收录为准，短语可能没有录音。\"})"
   }
 ]

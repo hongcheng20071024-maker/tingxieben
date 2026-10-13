@@ -24,9 +24,9 @@ const deferred = () => { let resolve, reject; const promise = new Promise((a, b)
 const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
 
 function harness({ fetcher = async () => response(payload()), audioReject = false, audioThrows = false,
-  cache = new Map() } = {}) {
+  cache = new Map(), failures = new Map() } = {}) {
   const states = [], fetches = [], spoken = [], audios = [], timers = new Map();
-  let nativeCancelled = 0, nextTimer = 0;
+  let nativeCancelled = 0, nativeErrorsCleared = 0, nextTimer = 0, clock = 1000;
   class FakeAudio {
     constructor() { this.paused = true; this.pauseCalls = 0; this.playCalls = 0; audios.push(this); }
     play() {
@@ -40,15 +40,17 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     removeAttribute(key) { if (key === 'src') this.src = ''; }
     load() {}
   }
-  const native = { cancel: () => { nativeCancelled += 1; }, clearError: () => {},
+  const native = { cancel: () => { nativeCancelled += 1; }, clearError: () => { nativeErrorsCleared += 1; },
     speak: (...arguments_) => spoken.push(arguments_) };
   const controller = v5CreateAudioController({ getNative: () => native,
     fetcher: (...arguments_) => { fetches.push(arguments_); return fetcher(...arguments_); },
-    makeAudio: () => new FakeAudio(), onState: state => states.push({ ...state }), cache,
+    makeAudio: () => new FakeAudio(), onState: state => states.push({ ...state }), cache, failures, now: () => clock,
     setTimer: (callback, ms) => { const id = ++nextTimer; timers.set(id, { callback, ms }); return id; },
     clearTimer: id => timers.delete(id) });
-  return { controller, states, fetches, spoken, audios, timers, cache,
+  return { controller, states, fetches, spoken, audios, timers, cache, failures,
+    advance: milliseconds => { clock += milliseconds; },
     get nativeCancelled() { return nativeCancelled; },
+    get nativeErrorsCleared() { return nativeErrorsCleared; },
     fire(ms) { const item = [...timers.entries()].find(([, value]) => value.ms === ms); assert.ok(item, `timer ${ms} exists`); timers.delete(item[0]); item[1].callback(); } };
 }
 
@@ -105,6 +107,13 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(h.fetches.length, 0);
     assert.equal(h.spoken[0][5], 'chosen');
     assert.equal(h.spoken[0][2], 0.8);
+    assert.equal(h.controller.getState().phase, 'starting');
+    assert.equal(h.controller.getState().actualSource, 'device-en');
+    assert.equal(h.controller.getState().speaking, false);
+    h.spoken[0][6]();
+    assert.equal(h.controller.getState().phase, 'playing');
+    h.spoken[0][3]();
+    assert.equal(h.controller.getState().phase, 'ended');
     pass('device source speaks synchronously and never queries dictionary');
   }
   {
@@ -113,6 +122,11 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(h.fetches.length, 0);
     assert.equal(h.spoken[0][1], 'zh-CN');
     assert.equal(h.spoken[0][5], 'chinese');
+    assert.equal(h.controller.getState().actualSource, 'device-zh');
+    h.spoken[0][6]();
+    const rendered = JSON.stringify(V5AudioStatus({ speech: { ...h.controller.getState(), sourceLabel: '在线词典 · 美式录音' } }));
+    assert.match(rendered, /设备中文语音 · 正在播放/);
+    assert.equal(rendered.includes('在线词典'), false);
     pass('Chinese uses selected device voice even with an online English source');
   }
   {
@@ -134,13 +148,20 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(h.spoken.length, 0);
     assert.match(h.audios[0].src, /hello-us\.mp3$/);
     assert.equal(h.controller.getState().loading, true);
+    assert.equal(h.controller.getState().recording, null, 'media has not started, so there is no heard credit');
+    assert.equal(h.controller.getState().speaking, false);
+    assert.equal(h.controller.getState().phase, 'starting');
     h.audios[0].onplaying();
     assert.equal(h.controller.getState().loading, false);
     assert.equal(h.controller.getState().speaking, true);
     assert.equal(h.controller.getState().recording.accent, 'us');
+    assert.equal(h.controller.getState().phase, 'playing');
     h.audios[0].onended(); h.audios[0].onended();
     assert.equal(ended, 1);
     assert.equal(h.controller.getState().speaking, false);
+    assert.equal(h.controller.getState().phase, 'ended');
+    h.audios[0].onplaying();
+    assert.equal(h.controller.getState().phase, 'ended', 'late playing after completion cannot resurrect playback');
     assert.equal(h.timers.size, 0);
     await h.controller.speak('dictionary-uk', 'hello', 'en-US', 1);
     assert.match(h.audios[1].src, /hello-uk\.mp3$/);
@@ -164,7 +185,12 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(h.spoken[0][1], 'en-GB');
     assert.match(h.controller.getState().notice, /在线录音暂时不可用/);
     assert.equal(h.cache.size, 0);
-    pass('failed request uses device fallback and does not cache failure');
+    assert.equal(h.failures.size, 1);
+    await h.controller.speak('dictionary-uk', 'hello', 'en-US', 1);
+    assert.equal(h.fetches.length, 1, 'failure cooldown skips repeat lookup');
+    assert.equal(h.spoken.length, 2);
+    assert.equal(h.controller.getState().retryAvailable, true);
+    pass('failed request uses device fallback and short cooldown skips repeat lookup');
   }
   {
     const wait = deferred(); const h = harness({ fetcher: () => wait.promise });
@@ -189,6 +215,8 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(h.audios.length, 0);
     assert.equal(ended, 0);
     assert.equal(h.controller.getState().loading, false);
+    assert.equal(h.controller.getState().phase, 'stopped');
+    assert.equal(h.failures.size, 0, 'cancel is never treated as a lookup failure');
     pass('cancel during lookup aborts and never falls back or calls completion');
   }
   {
@@ -239,8 +267,9 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(h.audios[0].paused, true);
     assert.equal(h.audios[0].src, '');
     assert.equal(h.timers.size, 0);
-    assert.equal(h.controller.getState().recording.accent, 'us');
-    pass('cancel after playback stops media and suppresses stale media events');
+    assert.equal(h.controller.getState().recording, null, 'cancel before onplaying cannot credit unheard media');
+    assert.equal(h.controller.getState().phase, 'stopped');
+    pass('cancel before media starts suppresses stale events and never credits unheard audio');
   }
   {
     const h = harness();
@@ -299,6 +328,145 @@ function harness({ fetcher = async () => response(payload()), audioReject = fals
     assert.equal(cache.has('hello'), true);
     h.controller.cancel();
     pass('recording metadata cache is bounded to 120 words in memory');
+  }
+  {
+    let available = false;
+    const h = harness({ fetcher: async () => response(available ? payload() : []) });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 0.6);
+    assert.equal(h.fetches.length, 1);
+    assert.equal(h.spoken.length, 2);
+    assert.equal(h.spoken[1][2], 0.6, 'cooldown still respects current slow playback');
+    available = true;
+    await h.controller.retry();
+    assert.equal(h.fetches.length, 2);
+    assert.equal(h.audios.length, 1);
+    assert.equal(h.audios[0].playbackRate, 0.6);
+    h.audios[0].onplaying();
+    assert.equal(h.failures.size, 0);
+    assert.equal(h.controller.getState().retryAvailable, false);
+    pass('missing word cooldown skips lookup while explicit retry recovers with current playback rate');
+  }
+  {
+    const h = harness({ fetcher: async () => response([]) });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    h.advance(29999);
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(h.fetches.length, 1);
+    h.advance(1);
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(h.fetches.length, 2, 'exact cooldown expiry permits fresh lookup');
+    await h.controller.speak('dictionary-uk', 'hello', 'en-US', 1);
+    assert.equal(h.fetches.length, 3, 'the other resource has an independent cooldown');
+    pass('cooldown expires after thirty seconds and is scoped to word and resource');
+  }
+  {
+    let usAvailable = false;
+    const h = harness({ fetcher: async () => response(payload('hello', usAvailable ? ['us', 'uk'] : ['uk'])) });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(h.fetches.length, 1);
+    usAvailable = true;
+    h.advance(30000);
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(h.fetches.length, 2, 'expired missing-accent result does not reuse incomplete metadata forever');
+    assert.match(h.audios[0].src, /hello-us\.mp3$/);
+    h.controller.cancel();
+    pass('expired missing-accent result refreshes previously successful metadata');
+  }
+  {
+    const failures = new Map(Array.from({ length: 120 }, (_, i) => [`dictionary-us:word${i}`, { until: 31000, notice: 'missing' }]));
+    const h = harness({ failures, fetcher: async () => response([]) });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    assert.equal(failures.size, 120);
+    assert.equal(failures.has('dictionary-us:word0'), false);
+    assert.equal(failures.has('dictionary-us:hello'), true);
+    pass('failure cooldown memory is bounded to 120 word-resource entries');
+  }
+  {
+    const h = harness({ audioReject: true });
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1); await settle();
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1); await settle();
+    assert.equal(h.audios.length, 1, 'replay during cooldown avoids another failing media request');
+    assert.equal(h.spoken.length, 2);
+    await h.controller.retry(); await settle();
+    assert.equal(h.audios.length, 2, 'a new user gesture may retry blocked media');
+    assert.equal(h.fetches.length, 2);
+    pass('media playback failures use cooldown and permit explicit recovery attempt');
+  }
+  {
+    const h = harness({ fetcher: async () => response([]) }); let advanced = 0;
+    await h.controller.speak('dictionary-us', 'hello', 'en-US', 1, () => advanced++);
+    h.spoken[0][3]();
+    assert.equal(advanced, 1);
+    await h.controller.retry();
+    h.spoken[1][6](); h.spoken[1][3]();
+    assert.equal(advanced, 1, 'manual retry must not duplicate paper advancement callbacks');
+    const visible = JSON.stringify(V5AudioStatus({ speech: { ...h.controller.getState(), retry: h.controller.retry, sourceLabel: '在线词典 · 美式录音' } }));
+    assert.match(visible, /重试在线录音/);
+    const hidden = JSON.stringify(V5AudioStatus({ speech: { ...h.controller.getState(), retry: h.controller.retry }, allowRetry: false }));
+    assert.equal(hidden.includes('重试在线录音'), false);
+    pass('manual retry never repeats automatic progression and can be hidden during paper playback');
+  }
+  {
+    const h = harness(); let ended = 0;
+    await h.controller.speak('device', 'hello', 'en-US', 1, () => ended++);
+    const oldStart = h.spoken[0][6], oldEnd = h.spoken[0][3];
+    h.controller.cancel(); oldStart(); oldEnd();
+    assert.equal(h.controller.getState().phase, 'stopped');
+    assert.equal(ended, 0);
+    await h.controller.speak('device', 'bank', 'en-US', 1, null, () => ended++);
+    h.spoken[1][4]();
+    assert.equal(h.controller.getState().phase, 'error');
+    assert.equal(ended, 1);
+    pass('native start/end/error lifecycle is truthful and canceled callbacks stay inert');
+  }
+  {
+    const wait = deferred(); const h = harness({ fetcher: () => wait.promise });
+    const lookup = h.controller.speak('dictionary-us', 'hello', 'en-US', 1);
+    const token = h.controller.externalStart();
+    assert.equal(h.fetches[0][1].signal.aborted, true);
+    assert.equal(h.controller.getState().phase, 'starting');
+    assert.equal(h.controller.getState().actualSource, 'other-recording');
+    h.controller.externalPlaying(token);
+    assert.equal(h.controller.getState().phase, 'playing');
+    h.controller.externalEnd(token);
+    assert.equal(h.controller.getState().phase, 'ended');
+    wait.resolve(response(payload())); await lookup; await settle();
+    assert.equal(h.audios.length, 0);
+    assert.equal(h.spoken.length, 0);
+    assert.equal(h.failures.size, 0);
+    await h.controller.speak('device', 'bank', 'en-US', 1);
+    h.controller.externalPlaying(token); h.controller.externalEnd(token, true);
+    assert.equal(h.controller.getState().actualSource, 'device-en');
+    assert.equal(h.controller.getState().phase, 'starting');
+    pass('other-recording takeover cancels pending work and stale external events cannot replace new source state');
+  }
+  {
+    const h = harness();
+    const token = h.controller.externalStart();
+    assert.equal(h.nativeErrorsCleared, 1, 'new external playback clears stale device error');
+    h.controller.externalPlaying(token);
+    h.controller.externalEnd(token, false, true);
+    assert.equal(h.controller.getState().phase, 'stopped');
+    assert.equal(h.controller.getState().speaking, false);
+    const resumedToken = h.controller.externalStart();
+    h.controller.externalPlaying(resumedToken);
+    h.controller.externalEnd(token, false, true);
+    assert.equal(h.controller.getState().phase, 'playing', 'pause from the old audio cannot stop the resumed source');
+    h.controller.externalEnd(resumedToken);
+    assert.equal(h.controller.getState().phase, 'ended');
+    pass('external pause is stopped, resume has a fresh token and stale native errors are cleared');
+  }
+  {
+    const h = harness();
+    const token = h.controller.externalStart();
+    h.controller.externalEnd(token, true);
+    assert.equal(h.controller.getState().phase, 'error');
+    h.controller.cancel(true);
+    assert.equal(h.controller.getState().retryAvailable, false);
+    assert.equal(h.controller.retry(), undefined);
+    pass('external playback error is visible and source reset invalidates manual retry');
   }
   console.log(JSON.stringify({ success: true, checks: passed.length, passed }, null, 2));
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -12,7 +12,7 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 | **v2 · 草稿纸** | **https://hongcheng20071024-maker.github.io/tingxieben/v2/** | 纸笔听写：手指 / Apple Pencil 在横线纸上手写、橡皮、撤销重做、多页、保存 PNG，草稿旁带播放控制 |
 | **v3 · 错词重写** | **https://hongcheng20071024-maker.github.io/tingxieben/v3/** | 键盘听写 + **答错后再写一遍**（默认开启，可关）：拼错或点「不会，查看答案」后保留原答案与正确拼写，**写对才能进入下一词**；成绩仍按第一次作答计算。同时包含 v2 的纸笔草稿纸 |
 | **v4 · 听英文写中文意思** | **https://hongcheng20071024-maker.github.io/tingxieben/v4/** | 在键盘听写里新增「**英文发音 → 写中文意思**」：写对词库里录入的任意一种释义即可，多义词（`bank 银行；河岸`）答对任一个都算；检查后给出参考释义，可重听。含 v2 草稿纸与 v3 错词重写 |
-| **v5 · 中英文双听写** | **https://hongcheng20071024-maker.github.io/tingxieben/v5/** | 新增「**英文发音 → 写英文和中文**」：一个单词分别填英文拼写和任意一种完整中文意思，**两项都对才算这一词正确**，成绩分列拼写与意思两项；首页还能选「发音资源」——设备语音 / 美式词典录音 / 英式词典录音（在线录音来自 Free Dictionary API，**只发送当前单词**，断网或查不到所选口音时自动回退设备发音）。含前面各版的全部功能 |
+| **v5 · 中英文双听写** | **https://hongcheng20071024-maker.github.io/tingxieben/v5/** | 新增「**英文发音 → 写英文和中文**」：一个单词分别填英文拼写和任意一种完整中文意思，**两项都对才算这一词正确**，成绩分列拼写与意思两项；首页还能选「发音资源」——设备语音 / 美式词典录音 / 英式词典录音（在线录音来自 Free Dictionary API，**只发送当前单词**，断网或查不到所选口音时自动回退设备发音）。含前面各版的全部功能。**2026-10-13 打磨版**：发音状态与「更多发音设置」收拢为单行、答后反馈一并显示英文与中文两项判定并收起输入框、答后可展开「其他收录录音」手动试听 |
 
 五个版本**各自独立，可以同时装五个主屏幕图标**；在同一个浏览器、同一个站点下**共用同一份本地词库**，换版本不用重新导入。
 第一次用建议先联网打开原版，再联网打开要用的新版（原因见 [docs/v2草稿纸.md](docs/v2草稿纸.md)、[docs/v3错词重写.md](docs/v3错词重写.md)、[docs/v4中英文听写.md](docs/v4中英文听写.md) 与 [docs/v5中英文双听写.md](docs/v5中英文双听写.md)）。
@@ -81,7 +81,7 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 | `source/audio-v5.js`、`source/audio-v5.css` | v5 发音资源（设备语音 / 在线词典录音、来源与许可展示、回退逻辑）的源码（构建时内联） |
 | `source/v3-patches.json` | v3 对原版 HTML 的 9 处接入补丁（每处要求恰好匹配一次） |
 | `source/v4-patches.json` | v4 对原版 HTML 的 38 处接入补丁（每处要求恰好匹配一次） |
-| `source/v5-patches.json` | v5 对原版 HTML 的 48 处接入补丁（每处要求恰好匹配一次） |
+| `source/v5-patches.json` | v5 对原版 HTML 的 68 处接入补丁（每处要求恰好匹配一次） |
 | `manifest.webmanifest` | PWA 清单：名称、图标、全屏模式 |
 | `sw.js` | 原版 Service Worker：离线缓存（cache-first） |
 | `icon-*.png` | 主屏幕图标（180 / 192 / 512 / maskable） |
@@ -96,15 +96,15 @@ An offline-capable, single-file English vocabulary dictation web app (PWA) for i
 | `tools/test_scratchpad.cjs` | v2 浏览器回归测试（Playwright，17 项 × Chromium / WebKit） |
 | `tools/test_rewrite.cjs` | v3 浏览器回归测试（Playwright，11 项 × Chromium / WebKit） |
 | `tools/test_meaning.cjs` | v4 浏览器回归测试（Playwright，15 项 × Chromium / WebKit，含 PC / iPad 横竖屏 / iPhone 布局） |
-| `tools/test_dual.cjs` | v5 双听写浏览器回归测试（Playwright，22 项 × Chromium / WebKit） |
-| `tools/test_v5_regression.cjs` | v5 的旧听写方向回归测试（Playwright，15 项 × Chromium / WebKit，确认 v4 / v3 行为未被改坏） |
+| `tools/test_dual.cjs` | v5 双听写浏览器回归测试（Playwright，28 项 × Chromium / WebKit） |
+| `tools/test_v5_regression.cjs` | v5 的旧听写方向回归测试（Playwright，16 项 × Chromium / WebKit，确认 v4 / v3 行为未被改坏） |
 | `tests/v2-worker.test.cjs` | v2 离线缓存逻辑测试（`node tests/v2-worker.test.cjs`，无额外依赖） |
 | `tests/v3-worker.test.cjs` | v3 离线缓存逻辑测试（含「不清理 v1/v2 缓存」断言） |
 | `tests/v4-worker.test.cjs` | v4 离线缓存逻辑测试（含不清理 v1/v2/v3 缓存、不强制激活等断言） |
 | `tests/meaning-grader.test.cjs` | v4 释义判分单元测试（122 项：分隔符、词性编号、同义释义、片段与反义误判、混入错误答案等） |
 | `tests/v5-worker.test.cjs` | v5 离线缓存逻辑测试（含不清理 v1/v2/v3/v4 缓存、不强制激活等断言） |
 | `tests/dual-grader.test.cjs` | v5 双项判分单元测试（50 项：两项组合判定、英文规范化、中文完整释义、偏好存储） |
-| `tests/audio-v5.test.cjs` | v5 发音资源单元测试（22 项：口音选择、来源与许可校验、断网 / 超时 / 迟到结果回退、缓存上限） |
+| `tests/audio-v5.test.cjs` | v5 发音资源单元测试（32 项：口音选择、来源与许可校验、断网 / 超时 / 迟到结果回退、缓存上限） |
 | `docs/词库格式.md` | 词库 JSON 格式 + 用 AI 生成词库的提示词 |
 | `docs/v2草稿纸.md` | v2 说明：使用、构建、多版本共存的缓存注意事项 |
 | `docs/v3错词重写.md` | v3 说明：错词重写流程、构建、验证与限制 |
@@ -144,10 +144,10 @@ node tests/v4-worker.test.cjs    # 可选：验证 v4 的离线缓存逻辑与�
 node tests/meaning-grader.test.cjs   # 可选：122 项中文释义判分检查
 node tools/test_meaning.cjs      # 可选：v4 浏览器回归（需 Playwright；TEST_ENGINE=webkit 切换内核，TEST_OUTPUT 指定报告目录）
 node tests/dual-grader.test.cjs  # 可选：50 项双项判分检查
-node tests/audio-v5.test.cjs     # 可选：22 项发音资源与回退检查
+node tests/audio-v5.test.cjs     # 可选：32 项发音资源与回退检查
 node tests/v5-worker.test.cjs    # 可选：验证 v5 的离线缓存逻辑与版本隔离
-node tools/test_dual.cjs         # 可选：v5 双听写浏览器回归（22 项）
-node tools/test_v5_regression.cjs # 可选：v5 旧听写方向回归（15 项）
+node tools/test_dual.cjs         # 可选：v5 双听写浏览器回归（28 项）
+node tools/test_v5_regression.cjs # 可选：v5 旧听写方向回归（16 项）
 ```
 
 `tools/build_v3.py`、`tools/build_v4.py` 与 `tools/build_v5.py` 都会在构建前校验 `source/听写本.html` 的 Git blob SHA1，并要求补丁文件里每处补丁**恰好匹配一次**——接入点一变就停，避免静默改错。

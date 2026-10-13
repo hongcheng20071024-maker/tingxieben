@@ -9,6 +9,10 @@
 .v5-audio-setting .v5-audio-accent-note { margin-top: 5px; }
 .v5-audio-status { margin: 12px 0; color: #526480; font-size: 12px; line-height: 1.6; text-align: center; overflow-wrap: anywhere; }
 .v5-audio-status p { margin: 0; }
+.v5-audio-status .v5-audio-notice { margin-top: 4px; }
+.v5-audio-retry { min-height: 44px; margin-top: 7px; padding: 8px 12px; border: 1px solid #aebce0; border-radius: 8px; color: #243bcc; background: white; font: inherit; cursor: pointer; }
+.v5-audio-retry:hover { background: #eef1ff; }
+.v5-audio-retry:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
 .v5-audio-credit { margin-top: 5px !important; }
 .v5-audio-credit a { text-decoration: underline; text-underline-offset: 2px; }
 .v5-audio-credits { margin: 16px 0; padding: 12px 14px; border: 1px solid #e1e6f4; border-radius: 10px; color: #526480; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }

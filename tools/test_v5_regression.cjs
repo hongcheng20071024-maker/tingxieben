@@ -120,6 +120,13 @@ async function main() {
     }
 
     await rewriteOption().waitFor(); assert.equal(await rewriteOption().isChecked(),true);
+    const advancedVoice=page.locator('details.v5-advanced-voice');
+    assert.equal(await advancedVoice.evaluate(node=>node.open),false);
+    await advancedVoice.locator('summary').click();
+    assert((await advancedVoice.getByRole('combobox').count())>0,'Collapsed system voice controls must remain reachable in the original spelling mode');
+    await advancedVoice.locator('summary').click();
+    assert.equal(await page.getByRole('combobox',{name:'发音资源',exact:true}).isVisible(),true);
+    pass('Original spelling mode keeps pronunciation sources visible and system voice settings reachable through advanced controls');
     await choose('朗读内容',meaningOption);
     assert.equal(await rewriteOption().count(),0);
     assert.match(await page.locator('.practice-panel').innerText(),/一种/);

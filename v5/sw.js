@@ -1,6 +1,6 @@
 /* 听写本 v5：缓存只属于本版本、本目录，不自动刷新当前听写。 */
 const PREFIX = 'tingxieben-v5:' + encodeURIComponent(self.registration.scope) + ':';
-const CACHE = PREFIX + "bef1b85c0bae10901200";
+const CACHE = PREFIX + "e9b93b6feb1e5483ef18";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 const SCOPE = new URL(self.registration.scope);
 const INDEX = new URL('./index.html', SCOPE).href;

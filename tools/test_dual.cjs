@@ -56,7 +56,7 @@ async function main(){
   const testedHtmlSha256=crypto.createHash('sha256').update(fs.readFileSync(htmlPath)).digest('hex');
   const pageURL=process.env.TEST_FILE==='1'?pathToFileURL(htmlPath).href:'http://127.0.0.1:'+server.address().port+'/v5/';
   let browser,page;
-  const report=()=>({browser:process.env.TEST_ENGINE||'chromium',pageURL,testedHtmlSha256,passed,errors,screenshots,actualIPad:false,serviceWorkerEndToEnd:false,simulated:['speech synthesis','IME composition KeyboardEvent','dictionary recordings and network responses'],success:!process.exitCode});
+  const report=()=>({browser:process.env.TEST_ENGINE||'chromium',pageURL,testedHtmlSha256,passed,errors,screenshots,actualIPad:false,serviceWorkerEndToEnd:false,simulated:['speech synthesis','IME composition KeyboardEvent','dictionary recordings and network responses','other recording HTML media lifecycle events'],success:!process.exitCode});
   try{
     const engine=process.env.TEST_ENGINE==='webkit'?webkit:chromium;
     browser=await engine.launch({...(process.env.TEST_BROWSER?{executablePath:process.env.TEST_BROWSER}:{}),headless:true});
@@ -65,11 +65,11 @@ async function main(){
     page.on('pageerror',e=>errors.push(String(e)));
     await page.addInitScript(({seed})=>{
       if(!localStorage.getItem('listen-write-library-v1'))localStorage.setItem('listen-write-library-v1',JSON.stringify(seed));
-      window.__spoken=[];let speechTimer;
+      window.__spoken=[];window.__speechDuration=25;window.__recordingDuration=25;let speechTimer;
       Object.defineProperty(window,'SpeechSynthesisUtterance',{configurable:true,value:class{constructor(text){this.text=text;this.lang='';this.rate=1;this.voice=null;}}});
       const voices=[{name:'Simulated English',lang:'en-US',voiceURI:'test-en',localService:true,default:true},{name:'Simulated Chinese',lang:'zh-CN',voiceURI:'test-zh',localService:true,default:false}];
-      Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{getVoices:()=>voices,speaking:false,pending:false,paused:false,addEventListener:()=>{},removeEventListener:()=>{},cancel(){clearTimeout(speechTimer);this.speaking=false;},speak(u){window.__spoken.push({text:u.text,lang:u.lang,rate:u.rate});this.speaking=true;if(u.onstart)u.onstart({});speechTimer=setTimeout(()=>{this.speaking=false;if(u.onend)u.onend({});},25);}}});
-      window.__dictionaryMode='success';window.__dictionaryQueries=[];window.__recordings=[];window.__pendingDictionary=[];
+      Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{getVoices:()=>voices,speaking:false,pending:false,paused:false,addEventListener:()=>{},removeEventListener:()=>{},cancel(){clearTimeout(speechTimer);this.speaking=false;},speak(u){window.__spoken.push({text:u.text,lang:u.lang,rate:u.rate});this.speaking=true;if(u.onstart)u.onstart({});speechTimer=setTimeout(()=>{this.speaking=false;if(u.onend)u.onend({});},window.__speechDuration);}}});
+      window.__dictionaryMode='success';window.__dictionaryQueries=[];window.__recordings=[];window.__recordingPauses=[];window.__pendingDictionary=[];
       const fetchOriginal=window.fetch.bind(window);
       window.fetch=(input,options={})=>{
         const url=typeof input==='string'?input:input.url;
@@ -88,8 +88,8 @@ async function main(){
         constructor(src=''){super();this.src=src;this.playbackRate=1;this.paused=true;this.currentTime=0;this.duration=.03;this.preload='';}
         emit(type){this.dispatchEvent(new Event(type));if(typeof this['on'+type]==='function')this['on'+type](new Event(type));}
         load(){setTimeout(()=>{this.readyState=4;this.emit('canplay');this.emit('loadedmetadata');},0);}
-        play(){window.__recordings.push({src:this.src,rate:this.playbackRate});this.paused=false;this.emit('playing');this.timer=setTimeout(()=>{this.paused=true;this.emit('ended');},25);return Promise.resolve();}
-        pause(){clearTimeout(this.timer);this.paused=true;}
+        play(){window.__recordings.push({src:this.src,rate:this.playbackRate});this.paused=false;this.emit('playing');this.timer=setTimeout(()=>{this.paused=true;this.emit('ended');},window.__recordingDuration);return Promise.resolve();}
+        pause(){window.__recordingPauses.push(this.src);clearTimeout(this.timer);this.paused=true;}
         removeAttribute(name){if(name==='src')this.src='';}
       }});
     },{seed});
@@ -97,10 +97,11 @@ async function main(){
     const english=()=>page.getByRole('textbox',{name:'输入英文拼写',exact:true});
     const chinese=()=>page.getByRole('textbox',{name:'输入中文意思',exact:true});
     const rewrite=()=>page.getByRole('textbox',{name:'再写一次英文拼写',exact:true});
-    const rewriteOption=()=>page.getByRole('checkbox',{name:'答错后再写一遍',exact:true});
+    const rewriteOption=()=>page.getByRole('checkbox',{name:'英文拼写错后再写一遍',exact:true});
     const check=()=>page.getByRole('button',{name:'检查英文和中文',exact:true});
     const next=()=>page.getByRole('button',{name:'下一个单词',exact:true});
     const results=()=>page.getByRole('button',{name:'查看本轮结果',exact:true});
+    const audioStatus=()=>page.locator('.v5-audio-status [role="status"]');
     const frame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     async function choose(name,value){await page.getByRole('combobox',{name,exact:true}).click();await page.getByRole('option',{name:value,exact:true}).click();await page.locator('[role="listbox"]').waitFor({state:'hidden'});}
     async function group(name='五版双项测试'){for(const control of await page.getByRole('checkbox',{name:/^选择 /}).all())await control.uncheck();await page.getByRole('checkbox',{name:'选择 '+name,exact:true}).check();}
@@ -124,9 +125,11 @@ async function main(){
     async function assertComponents(en,zh){
       const feedback=page.locator('.feedback');
       assert.equal(await page.locator(en&&zh?'.feedback.correct':'.feedback.incorrect').count(),1,'Combined score requires both components');
-      assert.match(await feedback.innerText(),new RegExp('英文拼写[：: ]*(?:'+(en?'正确':'未正确|未匹配|错误|未作答|已查看答案')+')'));
-      assert.match(await feedback.innerText(),new RegExp('中文意思[：: ]*(?:'+(zh?'正确':'未正确|未匹配|错误|未作答|已查看答案')+')'));
+      assert.match(await feedback.innerText(),new RegExp('英文拼写[：: ]*(?:'+(en?'正确':'拼写不正确|未正确|未匹配|错误|未作答|已查看答案')+')'));
+      assert.match(await feedback.innerText(),new RegExp('中文意思[：: ]*(?:'+(zh?'正确':'未匹配词库释义|未正确|未匹配|错误|未作答|已查看答案')+')'));
       assert.equal(await feedback.locator('.v5-dual-verdict [data-correct="true"]').count(),Number(en)+Number(zh));
+      assert.equal(await page.locator('#answer, #meaning-answer').count(),0,'Answered dual inputs should give way to the feedback card');
+      assert.equal(await page.locator('.v5-dual-instruction').count(),0,'Input instructions should not duplicate answer feedback');
     }
     async function scoreHeading(correct,total){
       const heading=page.getByRole('heading',{name:`${correct} / ${total} 词双项正确`,exact:true});
@@ -134,9 +137,22 @@ async function main(){
     }
 
     await choose('朗读内容',dualOption);
-    await rewriteOption().waitFor();await rewriteOption().uncheck();
+    await rewriteOption().waitFor();await rewriteOption().check();
+    await page.getByRole('radio',{name:'纸笔听写',exact:true}).check();assert.equal(await rewriteOption().count(),0);
+    await page.getByRole('radio',{name:'键盘听写',exact:true}).check();assert.equal(await rewriteOption().isChecked(),true);
+    await rewriteOption().uncheck();await page.getByRole('radio',{name:'纸笔听写',exact:true}).check();assert.equal(await rewriteOption().count(),0);
+    await page.getByRole('radio',{name:'键盘听写',exact:true}).check();assert.equal(await rewriteOption().isChecked(),false);
+    pass('Paper mode hides the inapplicable spelling rewrite control and returning to keyboard mode restores both enabled and disabled preferences');
+    const advanced=page.locator('details.v5-advanced-voice');
+    assert.equal(await advanced.evaluate(node=>node.open),false);
+    assert.equal(await page.getByRole('combobox',{name:'发音资源',exact:true}).isVisible(),true);
+    await advanced.locator('summary').click();assert.equal(await advanced.evaluate(node=>node.open),true);
+    assert((await advanced.getByRole('combobox').count())>0,'System voice controls remain available when expanded');
+    await advanced.locator('summary').click();assert.equal(await advanced.evaluate(node=>node.open),false);
+    pass('Home keeps pronunciation resources accessible while system voice controls are available in a collapsed advanced section');
     assert.match(await page.locator('.practice-panel').innerText(),/英文|中文/);
     await screenshot('pc-dual-home.png',{width:1440,height:900},false);
+    await screenshot('small-phone-dual-home.png',{width:375,height:667},false);
     await start();
     await english().waitFor();await chinese().waitFor();
     assert.equal(await english().getAttribute('id'),'answer');assert.equal(await chinese().getAttribute('id'),'meaning-answer');
@@ -170,8 +186,8 @@ async function main(){
       if(en===null)await page.getByRole('button',{name:'不会，查看答案',exact:true}).click();else await answer(en,zh);
       await page.locator('.feedback').waitFor();await assertComponents(enCorrect,zhCorrect);
       assert.equal(await rewrite().count(),0);const advance=i===words.length-1?results():next();assert.equal(await advance.isDisabled(),false);
-      if(i===1)await screenshot('iphone-dual-spelling-wrong.png',{width:390,height:844});
-      if(i===2)await screenshot('iphone-dual-meaning-wrong.png',{width:390,height:844});
+      if(i===1)await screenshot('iphone-dual-spelling-wrong.png',{width:390,height:844},false);
+      if(i===2)await screenshot('iphone-dual-meaning-wrong.png',{width:390,height:844},false);
       await advance.click();
     }
     await scoreHeading(2,8);assert.equal(await page.locator('.result-row').count(),8);assert.equal(await page.locator('.result-row .answer-wrong').count(),6);
@@ -180,8 +196,13 @@ async function main(){
       const row=await page.locator('.result-row').nth(i).innerText();
       if(paired[i][0]!==null){assert(row.includes(paired[i][0].trim()));assert(row.includes(paired[i][1]));}
       else assert.match(row,/未作答|查看答案/);
+      const parts=await page.locator('.result-row').nth(i).locator('.v5-dual-answers .v5-answer-status').allTextContents();
+      assert.equal(parts.length,2,'Every result retains both independently graded answers');
+      assert.match(parts[0],paired[i][2]?/正确/:/拼写不正确|未匹配|已查看答案|未作答/);
+      assert.match(parts[1],paired[i][3]?/正确/:/未匹配词库释义|未匹配|已查看答案|未作答/);
     }
     pass('All four spelling-and-meaning correctness combinations receive separate feedback; the round counts a word correct only when both are correct');
+    pass('Answered forms remove duplicate inputs and instructions; every result names each component verdict in text as well as color');
     pass('Substring guesses, opposite meanings, mixed wrong-plus-correct guesses and English-as-Chinese are rejected; reveal is wrong and results preserve both answers');
     await page.getByRole('button',{name:'只练错词 · 6',exact:true}).click();await ensureProgress('01');assert.match(await page.locator('.progress-label').innerText(),/\/ 6 词/);
     const retry=[['bank','银行'],['bright','聪明'],['happy','幸福'],['light','灯'],['apple','苹果'],['method','办法']];
@@ -210,7 +231,7 @@ async function main(){
     for(const[index,pair]of[[longWords[0].word,longWords[0].meaning.split('；')[0]],[longWords[1].word+'wrong','很长的错误中文答案用来确认两个回答的反馈与结果不会溢出页面']].entries()){
       await english().fill(pair[0]);await chinese().fill(pair[1]);await page.keyboard.down('Enter');await page.locator(index===0?'.feedback.correct':'.feedback.incorrect').waitFor();await frame();
       const advance=index===0?next():results();assert.equal(await advance.evaluate(node=>node===document.activeElement),true);await page.keyboard.down('Enter');await frame();await ensureProgress(String(index+1).padStart(2,'0'));await page.keyboard.up('Enter');
-      await textFits('.feedback');await textFits('.feedback strong');await screenshot(index===0?'small-phone-long-dual-correct.png':'small-phone-long-dual-incorrect.png',{width:375,height:667});await advance.click();
+      await textFits('.feedback');await textFits('.feedback strong');await screenshot(index===0?'small-phone-long-dual-correct.png':'small-phone-long-dual-incorrect.png',{width:375,height:667},false);await advance.click();
       if(index===0){await frame();assert.equal(await english().evaluate(node=>node===document.activeElement),true);}
     }
     const heading=await scoreHeading(1,2);await frame();assert.equal(await heading.evaluate(node=>node===document.activeElement),true);await textFits('.result-row');await textFits('.result-row strong');await textFits('.result-row small');await screenshot('small-phone-long-dual-results.png',{width:375,height:667},false);await page.getByRole('button',{name:'回到词库',exact:true}).click();
@@ -241,6 +262,16 @@ async function main(){
     await page.waitForFunction(()=>window.__recordings.some(audio=>audio.src.endsWith('-uk.mp3')));
     assert.equal(await page.evaluate(()=>localStorage.getItem('listen-write-audio-source-v5')),'dictionary-uk');
     pass('Device preview makes no external lookup; US and UK previews use the requested accent, expose recording source and license, and save the choice');
+    await choose('朗读内容','中文释义 → 写英文');
+    const beforeChinese=await page.evaluate(()=>window.__dictionaryQueries.length);
+    await page.evaluate(()=>window.__speechDuration=1500);await start('五版音频测试');await play();
+    await page.waitForFunction(()=>document.querySelector('.session-area .v5-audio-status [role="status"]')?.textContent==='设备中文语音 · 正在播放');
+    assert.equal((await page.evaluate(()=>window.__spoken.at(-1))).lang,'zh-CN');
+    assert.equal(await page.evaluate(()=>window.__dictionaryQueries.length),beforeChinese);
+    assert.equal(await page.getByRole('button',{name:'重试在线录音',exact:true}).count(),0);
+    await page.waitForFunction(()=>document.querySelector('.session-area .v5-audio-status [role="status"]')?.textContent==='设备中文语音 · 播放结束');
+    await exitRound();await page.evaluate(()=>window.__speechDuration=25);await choose('朗读内容',dualOption);
+    pass('Selecting an online English source still identifies active and finished Chinese playback as device Chinese without an external lookup or irrelevant retry');
     await audioSource.selectOption('dictionary-us');await start('五版音频测试');await play();
     await page.waitForFunction(()=>window.__recordings.some(audio=>audio.src.endsWith('/recording-us.mp3')));
     assert(!/recording|录音[：:]|https:|dictionaryapi|wikimedia/i.test(await page.locator('.session-area').innerText()));
@@ -248,10 +279,48 @@ async function main(){
     await answer('recording','录音');await assertComponents(true,true);
     await page.locator('.session-area .v5-audio-credit').waitFor();
     assert.equal(await page.getByRole('link',{name:'CC BY-SA 3.0',exact:true}).getAttribute('href'),'https://creativecommons.org/licenses/by-sa/3.0/');
+    const otherRecordings=page.locator('details.dictionary-audio');
+    assert.equal(await otherRecordings.locator('summary').innerText(),'其他收录录音');
+    await otherRecordings.locator('summary').click();
+    const beforeOtherLookup=await page.evaluate(()=>window.__dictionaryQueries.length);
+    await otherRecordings.getByRole('button',{name:'加载词典录音',exact:true}).click();
+    const otherAudio=otherRecordings.locator('audio');await otherAudio.waitFor();
+    assert.equal(await page.evaluate(()=>window.__dictionaryQueries.length),beforeOtherLookup+1);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('listen-write-audio-source-v5')),'dictionary-us');
+    await otherAudio.evaluate(node=>{node.__testPauseCount=0;node.pause=()=>{node.__testPauseCount++;node.dispatchEvent(new Event('pause'));};});
+    const waitStatus=text=>page.waitForFunction(expected=>document.querySelector('.session-area .v5-audio-status [role="status"]')?.textContent===expected,text);
+    const otherEvent=type=>otherAudio.dispatchEvent(type);
+    await page.evaluate(()=>window.__recordingDuration=1500);
+    await page.getByRole('button',{name:'听英文发音',exact:true}).click();await waitStatus('在线词典 · 美式录音 · 正在播放');
+    const beforeOtherPlayback=await page.evaluate(()=>window.__recordingPauses.length);
+    await otherEvent('play');await otherEvent('playing');await waitStatus('其他收录录音 · 正在播放');
+    assert((await page.evaluate(()=>window.__recordingPauses.length))>beforeOtherPlayback,'Other recording should stop the main pronunciation audio');
+    await otherEvent('pause');await waitStatus('其他收录录音 · 已停止');
+    await otherEvent('play');await otherEvent('playing');await otherEvent('ended');await waitStatus('其他收录录音 · 播放结束');
+    await otherEvent('play');await otherEvent('playing');
+    const beforeMainPlayback=await otherAudio.evaluate(node=>node.__testPauseCount);
+    await page.getByRole('button',{name:'听英文发音',exact:true}).click();await waitStatus('在线词典 · 美式录音 · 正在播放');
+    assert((await otherAudio.evaluate(node=>node.__testPauseCount))>beforeMainPlayback,'Main pronunciation replay should pause the other recording');
+    await otherEvent('pause');await otherEvent('ended');await frame();
+    assert.equal(await audioStatus().innerText(),'在线词典 · 美式录音 · 正在播放','Stale other-recording events must not overwrite the current main playback state');
+    await waitStatus('在线词典 · 美式录音 · 播放结束');await page.evaluate(()=>window.__recordingDuration=25);
+    pass('Other recordings show distinct playing, paused and ended states, keep the selected source, stop main playback, and cannot overwrite newer main playback with stale media events');
     await page.evaluate(()=>window.__dictionaryMode='missing');await next().click();
     pass('Selected dictionary playback works in an active dual round without exposing the target word or recording URL before feedback');
     await page.waitForFunction(()=>window.__spoken.at(-1)?.text==='unrecorded');
     assert(!/unrecorded|https:|dictionaryapi|wikimedia/i.test(await page.locator('.session-area').innerText()));
+    assert.match(await audioStatus().innerText(),/设备英语语音/);
+    const beforeReplay=await page.evaluate(()=>({queries:window.__dictionaryQueries.length,spoken:window.__spoken.length}));
+    await play();await page.waitForFunction(n=>window.__spoken.length>n,beforeReplay.spoken);
+    assert.equal(await page.evaluate(()=>window.__dictionaryQueries.length),beforeReplay.queries,'Replaying a recently missing recording should use the device without another lookup');
+    await english().fill('working draft');await chinese().fill('中文草稿');
+    await page.evaluate(()=>window.__dictionaryMode='success');await page.getByRole('button',{name:'重试在线录音',exact:true}).click();
+    await page.waitForFunction(()=>window.__recordings.some(audio=>audio.src.endsWith('/unrecorded-us.mp3')));
+    assert.equal(await page.evaluate(()=>window.__dictionaryQueries.length),beforeReplay.queries+1,'Explicit retry bypasses the cooldown and makes one fresh lookup');
+    assert.equal(await english().inputValue(),'working draft');assert.equal(await chinese().inputValue(),'中文草稿');
+    await page.waitForFunction(()=>document.querySelector('.session-area .v5-audio-status [role="status"]')?.textContent==='在线词典 · 美式录音 · 播放结束');
+    assert.equal(await page.getByRole('button',{name:'重试在线录音',exact:true}).count(),0);
+    pass('Missing-recording replay uses the short cooldown; explicit online retry recovers immediately without changing either answer draft and shows the actual finished source');
     await answer('unrecorded','未记录');await page.evaluate(()=>window.__dictionaryMode='error');await next().click();
     await page.waitForFunction(()=>window.__spoken.at(-1)?.text==='offline');
     assert(!/offline|https:|dictionaryapi|wikimedia/i.test(await page.locator('.session-area').innerText()));

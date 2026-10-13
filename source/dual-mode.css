@@ -1,18 +1,27 @@
-.v5-dual-notice{margin:20px 0 12px;padding:16px 18px;border:1px solid #dce1fa;border-radius:12px;background:#f7f8ff;line-height:1.7;color:#53658b}
+.v5-dual-notice{margin:16px 0 12px;padding:12px 16px;border:1px solid #dce1fa;border-radius:12px;background:#f7f8ff;line-height:1.7;color:#53658b}
 .v5-dual-notice strong{color:#22365d;display:block;font-size:15px}
 .v5-dual-notice p{margin:6px 0 0;font-size:13px;overflow-wrap:anywhere}
+.v5-grading-details{font-size:13px;margin-top:2px}
+.v5-grading-details summary{cursor:pointer;min-height:44px;box-sizing:border-box;padding:12px 0;line-height:1.5;width:fit-content;max-width:100%;color:#354bc3;border-radius:4px}
+.v5-grading-details summary:focus-visible{outline:2px solid #354bc3;outline-offset:3px}
+.v5-grading-details[open]{padding-bottom:4px}
+.v5-advanced-voice>summary{font-weight:600}
+.v5-advanced-voice>.settings{grid-template-columns:repeat(2,minmax(0,1fr));padding:0;margin:8px 0 12px}
 .v5-dual-instruction{font-size:13px;line-height:1.7;color:#657599;margin:0 0 18px}
 .v5-answer-label{display:block;font-size:13px;color:#53658b;text-align:left;margin:12px 0 8px}
 .session-area[data-dual=true] .answer-input{text-align:left;font-size:19px;padding-left:18px;min-height:52px}
 .session-area[data-dual=true] .v5-meaning-input{font-size:17px}
 .v5-dual-verdict{display:flex;gap:5px 14px;flex-wrap:wrap;margin:0 0 9px;font-size:14px}
 .v5-dual-verdict p{margin:0!important;font-weight:600}
+.v5-dual-verdict .v5-meaning-help{flex-basis:100%;font-size:12px;font-weight:400;line-height:1.7;color:#657599}
 .v5-part-correct{color:#247351!important}
 .v5-part-incorrect{color:#a4431a!important}
 .v5-dual-answers{display:grid;gap:5px;margin-top:10px;font-size:13px;overflow-wrap:anywhere;word-break:break-word}
 .v5-dual-answers small{font-size:13px;line-height:1.6}
+.v5-answer-status{font-weight:600}
 .v5-dual-totals{color:#68779a;font-size:13px;line-height:1.7;margin:8px 0 16px;overflow-wrap:anywhere}
 .session-area[data-dual=true] .result-row .v5-dual-answers{margin-top:7px}
 .session-area[data-dual=true] .result-row{min-width:0}
 .session-area[data-dual=true] .feedback strong,.session-area[data-dual=true] .feedback p{overflow-wrap:anywhere}
 @media(max-width:600px){.session-area[data-dual=true] .listening-disc{width:76px;height:76px;margin-top:6px}.session-area[data-dual=true] .listen-title{font-size:20px;margin:14px 0 12px}.session-area[data-dual=true] .answer-input{font-size:17px;min-height:48px}.v5-dual-instruction{margin-bottom:12px}.v5-dual-notice{padding:14px}.v5-dual-verdict{gap:5px 12px}}
+@media(max-width:480px){.v5-advanced-voice>.settings{grid-template-columns:minmax(0,1fr)}}
