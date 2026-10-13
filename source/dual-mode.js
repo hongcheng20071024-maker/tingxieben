@@ -25,22 +25,24 @@ function v5GradeDual(english, chinese, word, revealed = false) {
 function V5DualSetting({ paper, enabled, onChange }) {
   return (0, y.jsxs)(y.Fragment, { children: [
     (0, y.jsxs)('div', { className: 'v5-dual-notice', children: [
-      (0, y.jsx)('strong', { children: '一次听写，同时记住拼写和意思' }),
+      (0, y.jsx)('strong', { children: '听英文，写英文和中文' }),
       (0, y.jsx)('p', { children: paper
-        ? '听英文，在纸上或草稿纸写出英文和一种完整中文意思，结束后自行核对。'
-        : '听英文，填写英文拼写和词库中的任意一种完整中文意思；两项都正确才算这一词正确。' }),
-      (0, y.jsx)('p', { children: '例如 bank → bank + 银行。也可答“河岸”，前提是词库中包含该释义；同义表达可在分组中补充。' })
+        ? '在纸上或草稿纸写出英文和一种完整中文意思，结束后自行核对。'
+        : '两项都要填写；英文拼写和一种完整中文意思都正确，才算这一词正确。' }),
+      (0, y.jsxs)('details', { className: 'v5-grading-details', children: [
+        (0, y.jsx)('summary', { children: paper ? '核对说明' : '判分说明' }),
+        (0, y.jsx)('p', { children: '中文可答词库中的任意一种完整释义；如果填写多种意思，每一种都需要匹配。' }),
+        (0, y.jsx)('p', { children: '例如 bank → bank + 银行。词库也包含“河岸”时，写“河岸”也可以。同义表达可在分组中补充。' })
+      ] })
     ] }),
-    (0, y.jsxs)('div', { className: 'v3-rewrite-setting', children: [
+    !paper && (0, y.jsxs)('div', { className: 'v3-rewrite-setting', children: [
       (0, y.jsxs)('label', { className: 'v3-rewrite-option', children: [
-        (0, y.jsx)('input', { type: 'checkbox', checked: enabled, 'aria-label': '答错后再写一遍',
+        (0, y.jsx)('input', { type: 'checkbox', checked: enabled, 'aria-label': '英文拼写错后再写一遍',
           'aria-describedby': 'rewrite-setting-description', onChange: event => onChange(event.target.checked) }),
-        (0, y.jsx)('span', { children: '答错后再写一遍' }),
+        (0, y.jsx)('span', { children: '英文拼写错后再写一遍' }),
         (0, y.jsx)('small', { children: '错词巩固' })
       ] }),
-      (0, y.jsx)('p', { id: 'rewrite-setting-description', children: paper
-        ? '用于键盘听写；纸笔听写仍在本轮结束后自行核对。'
-        : '英文拼写答错或查看答案后，重新拼写正确才能继续；仅中文意思答错不要求重写。成绩按第一次作答计算。' })
+      (0, y.jsx)('p', { id: 'rewrite-setting-description', children: '拼写错或查看答案后，写对才能继续；仅中文错无需重写。按首次作答计分。' })
     ] })
   ] });
 }
@@ -66,21 +68,30 @@ function V5ChineseInput({ inputRef, value, onChange, disabled, composing, lastFi
     })
   ] });
 }
+function v5DualPartStatus(record, part) {
+  if (record?.revealed) return '已查看答案';
+  if (part === 'english') return record?.spellingCorrect ? '正确' : '拼写不正确';
+  return record?.meaningCorrect ? '正确' : '未匹配词库释义';
+}
 function V5DualVerdict({ record }) {
   return (0, y.jsxs)('div', { className: 'v5-dual-verdict', children: [
-    ['english', '英文拼写', record?.spellingCorrect], ['meaning', '中文意思', record?.meaningCorrect]
-  ].map(([part, label, correct]) => (0, y.jsx)('p', {
-    'data-part': part, 'data-correct': !!correct, className: correct ? 'v5-part-correct' : 'v5-part-incorrect',
-    children: label + '：' + (record?.revealed ? '已查看答案' : correct ? '正确' : '未匹配')
-  }, part)) });
+    [['english', '英文拼写', record?.spellingCorrect], ['meaning', '中文意思', record?.meaningCorrect]]
+      .map(([part, label, correct]) => (0, y.jsx)('p', {
+        'data-part': part, 'data-correct': !!correct, className: correct ? 'v5-part-correct' : 'v5-part-incorrect',
+        children: label + '：' + v5DualPartStatus(record, part)
+      }, part)),
+    record && !record.meaningCorrect && !record.revealed && (0, y.jsx)('p', {
+      className: 'v5-meaning-help', children: '请对照词库中的完整释义；同义表达可在分组中补充。'
+    })
+  ] });
 }
-function V5DualAnswers({ record }) {
+function V5DualAnswers({ record, compact = false }) {
   if (!record) return null;
   return (0, y.jsxs)('div', { className: 'v5-dual-answers', children: [
     (0, y.jsxs)('small', { 'data-part': 'english', className: record.spellingCorrect ? 'v5-part-correct' : 'v5-part-incorrect',
-      children: ['你的英文：', record.answer] }),
+      children: [!compact && (0, y.jsx)('span', { className: 'v5-answer-status', children: '英文拼写：' + v5DualPartStatus(record, 'english') + ' · ' }), '你的英文：', record.answer] }),
     (0, y.jsxs)('small', { 'data-part': 'meaning', className: record.meaningCorrect ? 'v5-part-correct' : 'v5-part-incorrect',
-      children: ['你的中文：', record.meaningAnswer] })
+      children: [!compact && (0, y.jsx)('span', { className: 'v5-answer-status', children: '中文意思：' + v5DualPartStatus(record, 'meaning') + ' · ' }), '你的中文：', record.meaningAnswer] })
   ] });
 }
 function V5DualTotals({ records, total }) {
