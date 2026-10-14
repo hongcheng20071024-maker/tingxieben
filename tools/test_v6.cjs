@@ -1,0 +1,141 @@
+/* Rendered v6 regression. Isolated browser data, simulated speech and IME events.
+ * Does not claim physical iPad / Apple Pencil / operating-system audio coverage. */
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
+const assert=require('node:assert/strict'),crypto=require('node:crypto');
+const {pathToFileURL}=require('node:url');
+const modules=process.env.CODEX_NODE_MODULES||path.join(process.env.USERPROFILE||process.env.HOME||'.','.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules');
+function dependency(name){try{return require(name);}catch(_){return require(path.join(modules,name));}}
+const {chromium,webkit}=dependency('playwright');
+const root=path.resolve(__dirname,'..');
+const output=process.env.TEST_OUTPUT?path.resolve(process.env.TEST_OUTPUT):path.resolve(root,'../../outputs/tingxieben-v6-tests');
+fs.mkdirSync(output,{recursive:true});
+const passed=[],screenshots=[],errors=[];
+function pass(name){passed.push(name);console.log('PASS '+name);}
+const dualWords=[
+  {word:'benefit',meaning:'n. 益处；v. 使受益'},
+  {word:'desperately',meaning:'adv. 拼命地；不顾一切地'},
+  {word:'bright',meaning:'明亮的；聪明的'},
+  {word:'happy',meaning:'快乐的；幸福的'},
+  {word:'carefully',meaning:'小心地处理事情；认真地做'},
+  {word:'bank',meaning:'银行；河岸'}
+];
+const seed=[
+  {id:'v6-browser-dual',revision:1,name:'六版双项测试',words:dualWords},
+  {id:'v6-browser-meaning',revision:1,name:'六版中文测试',words:[dualWords[1],dualWords[4],dualWords[2]]},
+  {id:'v6-browser-original',revision:1,name:'六版原有模式',words:[dualWords[0],{word:"can't",meaning:'不能'}]},
+  {id:'v6-browser-one',revision:1,name:'六版单词测试',words:[dualWords[0]]},
+  {id:'v6-browser-empty',revision:1,name:'六版空释义',words:[{word:'lonely',meaning:''}]},
+  {id:'v6-browser-pos',revision:1,name:'六版仅词性',words:[{word:'marker',meaning:'n. v.'}]},
+  {id:'v6-browser-long',revision:1,name:'六版长文本',words:[{word:'pneumonoultramicroscopicsilicovolcanoconiosis',meaning:'由吸入非常细微的硅尘所引起的一种肺部疾病；矽肺病'}]}
+];
+const DUAL='英文发音 → 写英文和中文',MEANING='英文发音 → 写中文意思';
+async function main(){
+  const server=http.createServer((req,res)=>{try{let relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(relative.endsWith('/'))relative+='index.html';const file=path.resolve(root,'.'+relative);if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}res.setHeader('Content-Type',path.extname(file)==='.html'?'text/html; charset=utf-8':'application/octet-stream');res.end(fs.readFileSync(file));}catch(_){res.writeHead(404).end('missing');}});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const htmlPath=path.join(root,'v6/index.html');
+  const testedHtmlSha256=crypto.createHash('sha256').update(fs.readFileSync(htmlPath)).digest('hex');
+  const pageURL=process.env.TEST_FILE==='1'?pathToFileURL(htmlPath).href:'http://127.0.0.1:'+server.address().port+'/v6/';
+  let browser,page;
+  const report=()=>({browser:process.env.TEST_ENGINE||'chromium',pageURL,testedHtmlSha256,passed,errors,screenshots,actualIPad:false,serviceWorkerEndToEnd:false,simulated:['speech synthesis','IME composition KeyboardEvent'],success:!process.exitCode});
+  try{
+    const engine=process.env.TEST_ENGINE==='webkit'?webkit:chromium;
+    browser=await engine.launch({headless:true,...(process.env.TEST_BROWSER?{executablePath:process.env.TEST_BROWSER}:{})});
+    const context=await browser.newContext({viewport:{width:1440,height:900}});
+    page=await context.newPage();page.on('pageerror',error=>errors.push(String(error)));
+    await page.addInitScript(({seed})=>{
+      if(!localStorage.getItem('listen-write-library-v1'))localStorage.setItem('listen-write-library-v1',JSON.stringify(seed));
+      window.__spoken=[];window.__speechMode='success';window.__dictionaryMode='success';window.__audioMode='success';window.__queries=[];window.__recordings=[];window.__pendingDictionary=[];let timer;
+      Object.defineProperty(window,'SpeechSynthesisUtterance',{configurable:true,value:class{constructor(text){this.text=text;this.lang='';this.rate=1;this.voice=null;}}});
+      const voices=[{name:'Simulated English',lang:'en-US',voiceURI:'test-en',localService:true,default:true},{name:'Simulated Chinese',lang:'zh-CN',voiceURI:'test-zh',localService:true,default:false}];
+      Object.defineProperty(window,'speechSynthesis',{configurable:true,value:{getVoices:()=>voices,speaking:false,pending:false,paused:false,addEventListener(){},removeEventListener(){},cancel(){clearTimeout(timer);this.speaking=false;},speak(u){window.__spoken.push({text:u.text,lang:u.lang,rate:u.rate});this.speaking=true;if(window.__speechMode==='silent')return;u.onstart?.({});timer=setTimeout(()=>{this.speaking=false;u.onend?.({});},25);}}});
+      const fetchOriginal=window.fetch.bind(window);
+      window.fetch=(input,options={})=>{const url=typeof input==='string'?input:input.url;if(!url.startsWith('https://api.dictionaryapi.dev/api/v2/entries/en/'))return fetchOriginal(input,options);const word=decodeURIComponent(url.split('/').at(-1));window.__queries.push(word);const response={ok:true,json:async()=>[{word,phonetics:['us','uk'].map(accent=>({audio:`https://api.dictionaryapi.dev/media/pronunciations/en/${word}-${accent}.mp3`,sourceUrl:`https://commons.wikimedia.org/wiki/File:En-${accent}-${word}.ogg`,license:{name:'CC BY-SA 3.0',url:'https://creativecommons.org/licenses/by-sa/3.0/'}}))}]};if(window.__dictionaryMode==='pending')return new Promise(resolve=>window.__pendingDictionary.push(()=>resolve(response)));if(window.__dictionaryMode==='error')return Promise.reject(new Error('Network unavailable'));return Promise.resolve(response);};
+      Object.defineProperty(window,'Audio',{configurable:true,value:class{constructor(){this.src='';this.playbackRate=1;this.paused=true;}load(){}removeAttribute(name){if(name==='src')this.src='';}pause(){clearTimeout(this.timer);this.paused=true;}play(){window.__recordings.push(this.src);if(window.__audioMode==='block-once'){window.__audioMode='success';const error=new Error('Needs a direct user gesture');error.name='NotAllowedError';return Promise.reject(error);}if(window.__audioMode==='block'){const error=new Error('Needs a direct user gesture');error.name='NotAllowedError';return Promise.reject(error);}this.paused=false;this.onplaying?.();this.timer=setTimeout(()=>{this.paused=true;this.onended?.();},50);return Promise.resolve();}}});
+    },{seed});
+    await page.goto(pageURL);
+    const english=()=>page.getByRole('textbox',{name:'输入英文拼写',exact:true});
+    const chinese=()=>page.getByRole('textbox',{name:'输入中文意思',exact:true});
+    const rewriteEn=()=>page.getByRole('textbox',{name:'再写一次英文拼写',exact:true});
+    const rewriteZh=()=>page.getByRole('textbox',{name:'再写一次中文意思',exact:true});
+    const option=()=>page.getByRole('checkbox',{name:'答错后再写一遍',exact:true});
+    const confirm=()=>page.getByRole('button',{name:'确认重写',exact:true});
+    const next=()=>page.getByRole('button',{name:'下一个单词',exact:true});
+    const results=()=>page.getByRole('button',{name:'查看本轮结果',exact:true});
+    const frame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    async function choose(name,value){await page.getByRole('combobox',{name,exact:true}).click();await page.getByRole('option',{name:value,exact:true}).click();await page.locator('[role="listbox"]').waitFor({state:'hidden'});}
+    async function group(name){for(const control of await page.getByRole('checkbox',{name:/^选择 /}).all())await control.uncheck();await page.getByRole('checkbox',{name:'选择 '+name,exact:true}).check();}
+    async function start(name,mode='键盘听写'){await group(name);await page.getByRole('radio',{name:mode,exact:true}).check();await page.locator('.start-button').click();}
+    async function exitRound(cancel=false){await page.getByRole('button',{name:'返回词库',exact:true}).click();await page.getByRole('button',{name:cancel?'继续练习':'结束并返回',exact:true}).click();}
+    async function progress(number){await page.waitForFunction(n=>document.querySelector('.progress-label strong')?.textContent===n,number);}
+    async function dualAnswer(en,zh){await english().fill(en);await chinese().fill(zh);await page.getByRole('button',{name:'检查英文和中文',exact:true}).click();await page.locator('.feedback').waitFor();}
+    async function meaningAnswer(zh){await chinese().fill(zh);await page.getByRole('button',{name:'检查意思',exact:true}).click();await page.locator('.feedback').waitFor();}
+    async function correctionFields(en,zh){assert.equal(await rewriteEn().count(),Number(en),'English correction field eligibility');assert.equal(await rewriteZh().count(),Number(zh),'Chinese correction field eligibility');}
+    async function screenshot(name,viewport){await page.setViewportSize(viewport);await frame();const geometry=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth}));assert(geometry.scroll<=geometry.width+1,`${name}: horizontal overflow`);for(const field of [rewriteEn(),rewriteZh()])if(await field.count()){const box=await field.boundingBox();assert(box&&box.width>120&&box.x>=0&&box.x+box.width<=viewport.width+1,`${name}: correction field outside viewport`);}const file=path.join(output,name);await page.screenshot({path:file,fullPage:true});screenshots.push(file);}
+    async function home(){await page.getByRole('button',{name:'回到词库',exact:true}).click();}
+    const status=()=>page.locator('.session-area .v5-audio-status [role="status"]');
+    async function waitStatus(text){await page.waitForFunction(text=>document.querySelector('.session-area .v5-audio-status [role="status"]')?.textContent?.includes(text),text,{timeout:12000});}
+    async function play(){await page.getByRole('button',{name:/^(播放单词|重听)$/}).click();}
+
+    for(const cue of ['英文发音','中文释义 → 写英文',MEANING,DUAL]){await choose('朗读内容',cue);await option().waitFor();assert.equal(await option().isChecked(),true);await page.getByRole('radio',{name:'纸笔听写',exact:true}).check();assert.equal(await option().count(),0);await page.getByRole('radio',{name:'键盘听写',exact:true}).check();assert.equal(await option().isChecked(),true);}
+    pass('All four keyboard directions expose one rewrite preference, while paper mode hides it without changing it');
+    await option().uncheck();await page.reload();assert.equal(await option().isChecked(),false);await choose('朗读内容',MEANING);assert.equal(await option().isChecked(),false);await option().check();await page.reload();assert.equal(await option().isChecked(),true);
+    pass('The shared rewrite preference persists after reload and switching dictation direction');
+    await choose('朗读内容',DUAL);await screenshot('pc-v6-home.png',{width:1440,height:900});await screenshot('phone-v6-home.png',{width:375,height:667});
+    await start('六版双项测试');
+    await dualAnswer('benifit','使受益');await correctionFields(true,false);assert.equal(await next().isDisabled(),true);
+    await rewriteEn().fill('benifit');await confirm().click();assert.equal(await next().isDisabled(),true);assert.equal(await rewriteEn().getAttribute('aria-invalid'),'true');
+    await rewriteEn().fill(' BENEFIT ');await rewriteEn().press('Enter');assert.equal(await next().isDisabled(),false);await progress('01');assert.match(await page.locator('.progress-label').innerText(),/0 词正确/);
+    pass('Spelling-only mistakes require only English correction; a wrong correction blocks progress and normalization accepts the correct spelling');
+    await next().click();await progress('02');await dualAnswer('desperately','错误意思');await correctionFields(false,true);assert.equal(await next().isDisabled(),true);
+    await rewriteZh().fill('拼命的');await rewriteZh().dispatchEvent('compositionstart',{data:'拼命的'});await rewriteZh().press('Enter');assert.equal(await next().isDisabled(),true);assert.equal(await rewriteZh().count(),1);await rewriteZh().dispatchEvent('compositionend',{data:'拼命的'});await rewriteZh().dispatchEvent('keydown',{key:'Enter',code:'Enter',repeat:true,bubbles:true});assert.equal(await next().isDisabled(),true);
+    await screenshot('iphone-meaning-correction.png',{width:390,height:844});await rewriteZh().press('Enter');assert.equal(await next().isDisabled(),false);await progress('02');
+    pass('Meaning-only mistakes require only Chinese correction; IME confirmation and held Enter cannot finish correction, while 的/地 equivalence can');
+    await next().click();await progress('03');await dualAnswer('brigt','黑暗的');await correctionFields(true,true);assert.equal(await next().isDisabled(),true);
+    await rewriteEn().fill('bright');await rewriteEn().press('Enter');assert.equal(await next().isDisabled(),true);assert.equal(await rewriteZh().evaluate(node=>node===document.activeElement),true);
+    await rewriteZh().fill('明');await confirm().click();assert.equal(await next().isDisabled(),true);await rewriteZh().fill('错误；聪明地');await confirm().click();assert.equal(await next().isDisabled(),true);
+    for(const[name,size]of[['pc-both-corrections.png',{width:1440,height:900}],['ipad-portrait-both-corrections.png',{width:768,height:1024}],['ipad-landscape-both-corrections.png',{width:1024,height:768}],['small-phone-both-corrections.png',{width:375,height:667}]])await screenshot(name,size);
+    await rewriteZh().fill('聪明地');await confirm().click();assert.equal(await next().isDisabled(),false);await progress('03');
+    pass('Two mistakes require both corrections; English Enter moves to Chinese, partial or mixed wrong senses are rejected, and any full listed sense is accepted');
+    pass('Both correction fields and feedback fit desktop, iPad portrait, iPad landscape and a narrow phone without horizontal overflow');
+    await next().click();await dualAnswer('happy','幸福地');await page.locator('.feedback.correct').waitFor();await correctionFields(false,false);assert.equal(await next().isDisabled(),false);await next().click();
+    pass('A correct English answer plus Chinese 的/地 variant scores correct directly without a correction step');
+    await page.getByRole('button',{name:'不会，查看答案',exact:true}).click();await correctionFields(true,true);assert.equal(await next().isDisabled(),true);await rewriteEn().fill('carefully');await rewriteZh().fill('小心的处理事情');await confirm().click();assert.equal(await next().isDisabled(),false);await next().click();
+    pass('Revealing an answer requires both dual-mode corrections and applies 的/地 equivalence inside a full phrase');
+    await progress('06');await dualAnswer('bannk','海洋');assert.equal(await results().isDisabled(),true);await rewriteEn().fill('bank');await rewriteZh().fill('银行');await rewriteZh().focus();await page.keyboard.down('Enter');assert.equal(await results().isDisabled(),false);await progress('06');await page.keyboard.down('Enter');await frame();await progress('06');await page.keyboard.up('Enter');await results().click();
+    await page.getByRole('heading',{name:'1 / 6 词双项正确',exact:true}).waitFor();assert.match(await page.locator('.v5-dual-totals').innerText(),/英文拼写 2 \/ 6[\s\S]*中文意思 2 \/ 6/);assert.equal(await page.locator('.result-row').count(),6);assert.equal(await page.locator('.result-row .answer-wrong').count(),5);assert.match(await page.locator('.result-row').nth(0).innerText(),/benifit/);assert.match(await page.locator('.result-row').nth(1).innerText(),/错误意思/);assert.match(await page.locator('.result-row').nth(4).innerText(),/未作答|查看答案/);
+    pass('The last word cannot bypass corrections; held Enter preserves feedback and results retain all original first-attempt answers and scores');
+    await page.getByRole('button',{name:'只练错词 · 5',exact:true}).click();await progress('01');assert.match(await page.locator('.progress-label').innerText(),/\/ 5 词/);await correctionFields(false,false);assert.equal(await english().inputValue(),'');assert.equal(await chinese().inputValue(),'');await exitRound();
+    pass('Corrected words remain in wrong-word practice, which starts with clean inputs and correction state');
+
+    await choose('朗读内容',MEANING);await start('六版中文测试');await meaningAnswer('错误');await correctionFields(false,true);assert.equal(await next().isDisabled(),true);await rewriteZh().fill('不顾一切的');await confirm().click();assert.equal(await next().isDisabled(),false);await next().click();await meaningAnswer('小心的处理事情');await page.locator('.feedback.correct').waitFor();await correctionFields(false,false);await next().click();await page.getByRole('button',{name:'不会，查看答案',exact:true}).click();await correctionFields(false,true);assert.equal(await results().isDisabled(),true);await rewriteZh().fill('聪明地');await rewriteZh().press('Enter');await results().click();await page.getByRole('heading',{name:'1 / 3 词释义正确',exact:true}).waitFor();await home();
+    pass('Chinese-only mode corrects wrong and revealed meanings, accepts internal 的/地 variants, never demands English, and retains the initial score');
+    await option().uncheck();for(const cue of [MEANING,DUAL]){await choose('朗读内容',cue);await start('六版单词测试');if(cue===MEANING)await meaningAnswer('错误');else await dualAnswer('error','错误');await correctionFields(false,false);assert.equal(await results().isDisabled(),false);await results().click();await home();}await option().check();
+    pass('Turning the home preference off skips correction in Chinese-only and dual mode while retaining incorrect scores');
+    for(const cue of ['英文发音','中文释义 → 写英文']){await choose('朗读内容',cue);await start('六版原有模式');await english().fill('benifit');await english().press('Enter');await correctionFields(true,false);assert.equal(await next().isDisabled(),true);await rewriteEn().fill('benefit');await confirm().click();assert.equal(await next().isDisabled(),false);await next().click();await english().fill('can’t');await english().press('Enter');await page.locator('.feedback.correct').waitFor();await correctionFields(false,false);await exitRound();}
+    pass('Both original English-spelling directions retain wrong-answer correction and apostrophe normalization without asking for Chinese');
+    await choose('朗读内容',DUAL);await start('六版单词测试');await dualAnswer('benifit','错误');await rewriteEn().fill('bene');await rewriteZh().fill('使');await exitRound(true);assert.equal(await rewriteEn().inputValue(),'bene');assert.equal(await rewriteZh().inputValue(),'使');assert.equal(await results().isDisabled(),true);await exitRound();await start('六版单词测试');await correctionFields(false,false);assert.equal(await english().inputValue(),'');assert.equal(await chinese().inputValue(),'');await exitRound();
+    pass('Cancelling exit preserves correction drafts; ending a round and starting another resets correction state');
+    await start('六版长文本');await dualAnswer('wrong','这是一段比较长的错误中文答案用来检查反馈在小屏幕中能否完整显示');await screenshot('small-phone-long-corrections.png',{width:375,height:667});await rewriteEn().fill('pneumonoultramicroscopicsilicovolcanoconiosis');await rewriteZh().fill('矽肺病');await confirm().click();await screenshot('small-phone-correction-complete.png',{width:375,height:667});await results().click();await screenshot('small-phone-long-results.png',{width:375,height:667});await home();
+    pass('Long reference spelling and Chinese meanings fit a small-screen correction card, completed correction and results');
+
+    for(const cue of [MEANING,DUAL]){await choose('朗读内容',cue);for(const name of ['六版空释义','六版仅词性']){await group(name);const button=page.locator('.start-button');if(!(await button.isDisabled()))await button.click();assert.equal(await page.locator('#answer').count(),0);assert.match(await page.locator('.practice-panel').innerText(),/缺少可用于判分的中文释义/);}}
+    pass('Empty and part-of-speech-only meanings remain excluded from both modes that grade Chinese');
+    await group('六版单词测试');await page.getByRole('radio',{name:'纸笔听写',exact:true}).check();assert.equal(await option().count(),0);await choose('书写间隔','5 秒');await choose('每词朗读','1 遍');await page.setViewportSize({width:768,height:1024});await page.locator('.start-button').click();const canvas=page.locator('.scratchpad-panel canvas');await canvas.waitFor();await correctionFields(false,false);assert.equal(await page.locator('#answer').count(),0);const box=await canvas.boundingBox();await page.mouse.move(box.x+box.width*.2,box.y+box.height*.4);await page.mouse.down();await page.mouse.move(box.x+box.width*.7,box.y+box.height*.4,{steps:20});await page.mouse.up();await frame();const ink=await canvas.evaluate(c=>c.toDataURL());assert(await canvas.evaluate(c=>c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((value,i)=>i%4===3&&value>0)));await screenshot('ipad-paper-v6.png',{width:768,height:1024});await page.getByRole('button',{name:'草稿区开始播放',exact:true}).click();await page.getByRole('button',{name:'草稿区暂停',exact:true}).click();assert.equal(await canvas.evaluate(c=>c.toDataURL()),ink);await page.getByRole('button',{name:'草稿区继续',exact:true}).click();await page.getByRole('heading',{name:'本轮听写完成',exact:true}).waitFor({timeout:12000});assert.equal(await canvas.evaluate(c=>c.toDataURL()),ink);await correctionFields(false,false);await screenshot('ipad-paper-v6-results.png',{width:768,height:1024});await home();
+    pass('Paper mode stays manual, with no keyboard correction and intact scratchpad ink through playback, pause and round completion');
+    await page.getByRole('radio',{name:'键盘听写',exact:true}).check();await page.getByRole('combobox',{name:'发音资源',exact:true}).selectOption('dictionary-us');await start('六版单词测试');await english().fill('working draft');await chinese().fill('中文草稿');await page.evaluate(()=>window.__audioMode='block-once');const beforeBlocked=await page.evaluate(()=>window.__queries.length);await play();await waitStatus('等待你点按播放');assert.equal(await page.getByRole('button',{name:'点击播放在线录音',exact:true}).count(),1);assert.equal(await page.getByRole('button',{name:'用设备语音播放',exact:true}).count(),1);await screenshot('iphone-audio-needs-tap.png',{width:390,height:844});await page.getByRole('button',{name:'点击播放在线录音',exact:true}).click();await waitStatus('播放结束');assert.equal(await page.evaluate(()=>window.__queries.length),beforeBlocked+1);assert.equal(await english().inputValue(),'working draft');assert.equal(await chinese().inputValue(),'中文草稿');assert.equal(await page.getByRole('button',{name:'点击播放在线录音',exact:true}).count(),0);await exitRound();
+    pass('A gesture-blocked online recording offers direct tap recovery without another lookup or losing either draft answer');
+    await page.reload();await start('六版单词测试');await page.evaluate(()=>window.__dictionaryMode='pending');const recordingsBefore=await page.evaluate(()=>window.__recordings.length);await play();await page.getByRole('button',{name:'用设备语音播放',exact:true}).waitFor();await page.getByRole('button',{name:'用设备语音播放',exact:true}).click();await waitStatus('设备英语语音');await waitStatus('播放结束');await page.evaluate(()=>window.__pendingDictionary.forEach(resolve=>resolve()));await frame();await frame();assert.equal(await page.evaluate(()=>window.__recordings.length),recordingsBefore);assert.equal((await page.evaluate(()=>window.__spoken.at(-1))).text,'benefit');await exitRound();
+    pass('A pending online lookup can switch immediately to device audio; a late online response cannot start stale playback');
+    await start('六版单词测试');await play();await waitStatus('播放结束');assert.match(await status().innerText(),/设备/);assert.equal(await page.getByRole('button',{name:'重试在线录音',exact:true}).count(),1);await page.evaluate(()=>window.__dictionaryMode='success');await page.getByRole('button',{name:'重试在线录音',exact:true}).click();await waitStatus('播放结束');assert.match(await status().innerText(),/在线词典/);await exitRound();
+    pass('A lookup that never settles times out to device audio, and explicit online retry can recover after the service responds');
+    await page.getByRole('combobox',{name:'发音资源',exact:true}).selectOption('device');await start('六版单词测试');await page.evaluate(()=>window.__speechMode='silent');await play();await page.getByRole('button',{name:'用设备语音播放',exact:true}).waitFor({timeout:8000});assert.match(await status().innerText(),/失败|未能|异常|不可|错误/);await screenshot('iphone-device-audio-no-response.png',{width:390,height:844});await page.evaluate(()=>window.__speechMode='success');await page.getByRole('button',{name:'用设备语音播放',exact:true}).click();await waitStatus('播放结束');await exitRound();
+    pass('Device speech that produces no callbacks stops waiting after its deadline and provides a working direct retry');
+    await page.getByRole('combobox',{name:'发音资源',exact:true}).selectOption('dictionary-us');await page.getByRole('radio',{name:'纸笔听写',exact:true}).check();await group('六版原有模式');await page.locator('.start-button').click();await page.evaluate(()=>window.__audioMode='block');await page.getByRole('button',{name:'草稿区开始播放',exact:true}).click();await waitStatus('等待你点按播放');assert.equal(await page.getByRole('button',{name:'点击播放在线录音',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'用设备语音播放',exact:true}).count(),0);await progress('01');await page.getByRole('button',{name:'草稿区继续',exact:true}).waitFor();await screenshot('ipad-paper-audio-paused.png',{width:768,height:1024});await page.evaluate(()=>window.__audioMode='success');await page.getByRole('button',{name:'草稿区继续',exact:true}).click();await waitStatus('播放结束');await progress('01');await exitRound();
+    pass('Paper playback pauses on blocked audio without silently advancing; existing continue control recovers the recording');
+    assert.deepEqual(JSON.parse(await page.evaluate(()=>localStorage.getItem('listen-write-library-v1'))),seed);assert.deepEqual(errors,[]);
+    pass('All seeded library records remain unchanged and no browser JavaScript exceptions occur');
+  }catch(error){process.exitCode=1;if(page)try{await page.screenshot({path:path.join(output,'failure.png'),fullPage:true});}catch(_){}console.error(error);}
+  finally{fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(report(),null,2));console.log(JSON.stringify({passed:passed.length,output,success:!process.exitCode}));if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});
