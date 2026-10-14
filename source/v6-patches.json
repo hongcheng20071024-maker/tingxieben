@@ -1,0 +1,47 @@
+[
+  {
+    "name": "sixth version marker",
+    "old": "children:\"大学英语 / 自主练习 · v5\"",
+    "new": "children:\"大学英语 / 自主练习 · v6\""
+  },
+  {
+    "name": "one rewrite setting for every keyboard direction",
+    "old": "r.cue===\"dual\"?(0,y.jsx)(V5DualSetting,{paper:r.mode===\"paper\",enabled:r.rewriteWrong,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}}):r.cue===\"meaning\"?(0,y.jsx)(V4MeaningNotice,{paper:r.mode===\"paper\"}):r.mode!==\"paper\"&&(0,y.jsx)(V3RewriteSetting,{enabled:r.rewriteWrong,mode:r.mode,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}})",
+    "new": "(0,y.jsx)(V6PracticeSetting,{cue:r.cue,paper:r.mode===\"paper\",enabled:r.rewriteWrong,onChange:E=>{v3SaveRewritePreference(E),N(\"rewriteWrong\",E)}})"
+  },
+  {
+    "name": "all incorrect parts block advancement",
+    "old": "!v4Meaning&&l.rewriteWrong&&m&&(v5Dual?!c[c.length-1]?.spellingCorrect:!c[c.length-1]?.correct)&&!v3Rewritten",
+    "new": "!n&&l.rewriteWrong&&m&&!c[c.length-1]?.correct&&!v3Rewritten"
+  },
+  {
+    "name": "all incorrect parts keep next disabled",
+    "old": "v3Pending=m&&!v4Meaning&&l.rewriteWrong&&(v5Dual?!Gn?.spellingCorrect:!Gn?.correct)&&!v3Rewritten",
+    "new": "v3Pending=m&&!n&&l.rewriteWrong&&!Gn?.correct&&!v3Rewritten"
+  },
+  {
+    "name": "rewrite only incorrect fields",
+    "old": "m&&!v4Meaning&&l.rewriteWrong&&(v5Dual?!Gn?.spellingCorrect:!Gn?.correct)&&(0,y.jsx)(V3RewriteSpelling,{word:Ae.word,onComplete:()=>v3SetRewritten(true)},u)",
+    "new": "m&&!n&&l.rewriteWrong&&!Gn?.correct&&(0,y.jsx)(V6RewriteAnswers,{word:Ae,parts:v6RewriteParts(l.cue,Gn),onComplete:()=>v3SetRewritten(true)},u)"
+  },
+  {
+    "name": "direction aware rewrite guidance",
+    "old": "className:\"listen-title\",children:n?w:v5Dual?(m?(Gn?.correct?\"英文和中文都正确！\":Gn?.revealed?\"对照英文和释义，再记一次\":!Gn?.spellingCorrect&&l.rewriteWrong?(v3Rewritten?\"拼写已巩固，继续练习\":\"再写一遍，记住英文拼写\"):Gn?.spellingCorrect?\"英文正确，再记一下中文意思\":\"看看拼写和释义，再记一次\"):\"听英文，写英文和中文意思\"):v4Meaning?(m?(Gn?.correct?\"意思正确！\":Gn?.revealed?\"先记住一种意思，再继续\":\"看看参考释义，再记一次\"):\"听英文，写出一种中文意思\"):m?Gn?.correct?\"\\u62FC\\u5199\\u6B63\\u786E\\uFF01\":l.rewriteWrong?(v3Rewritten?\"已经写对，继续练习\":\"再写一遍，记住正确拼写\"):\"\\u8BB0\\u4F4F\\u8FD9\\u4E2A\\u8BCD\\uFF0C\\u4E0B\\u6B21\\u518D\\u6765\":l.cue===\"chinese\"?\"\\u542C\\u4E2D\\u6587\\u91CA\\u4E49\\uFF0C\\u5199\\u51FA\\u5BF9\\u5E94\\u7684\\u82F1\\u6587\":\"\\u542C\\u4E00\\u542C\\uFF0C\\u5199\\u51FA\\u4F60\\u542C\\u5230\\u7684\\u5355\\u8BCD\"",
+    "new": "className:\"listen-title\",children:n?w:v6PracticeTitle(l.cue,m,Gn,l.rewriteWrong,v3Rewritten)"
+  },
+  {
+    "name": "hide graded meaning input while rewriting",
+    "old": "!(v5Dual&&m)&&(0,y.jsxs)(y.Fragment,{children:[",
+    "new": "!((v5Dual||v4Meaning)&&m)&&(0,y.jsxs)(y.Fragment,{children:["
+  },
+  {
+    "name": "explain Chinese particle equivalence during dual answer",
+    "old": "中文匹配词库中的一种完整释义，两项都对才计为正确。",
+    "new": "中文匹配词库中的一种完整释义，“的／地”不区分；两项都对才计为正确。"
+  },
+  {
+    "name": "explain Chinese particle equivalence during meaning answer",
+    "old": "按词库中的释义核对；同义表达可在分组中补充。",
+    "new": "中文匹配一种完整释义，“的／地”不区分；同义表达可在分组中补充。"
+  }
+]

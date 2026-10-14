@@ -1,0 +1,42 @@
+[
+  {
+    "name": "v6.1 version marker",
+    "old": "children:\"大学英语 / 自主练习 · v6\"",
+    "new": "children:\"大学英语 / 自主练习 · v6.1\""
+  },
+  {
+    "name": "compact answered session",
+    "old": "className:\"session-card\"",
+    "new": "className:\"session-card\"+(m&&!n?\" v61-answered\":\"\")"
+  },
+  {
+    "name": "hide first input once graded",
+    "old": "!((v5Dual||v4Meaning)&&m)&&(0,y.jsxs)(y.Fragment,{children:[",
+    "new": "!m&&(0,y.jsxs)(y.Fragment,{children:["
+  },
+  {
+    "name": "answer reference owns replay after grading",
+    "old": "!(v5Dual&&m)&&(0,y.jsxs)(\"div\",{className:\"replay-actions\"",
+    "new": "!m&&(0,y.jsxs)(\"div\",{className:\"replay-actions\""
+  },
+  {
+    "name": "condense answered rules",
+    "old": "!(v5Dual&&m)&&(0,y.jsx)(\"p\",{className:\"paper-note\"",
+    "new": "!m&&(0,y.jsx)(\"p\",{className:\"paper-note\""
+  },
+  {
+    "name": "one reference card inside or outside correction",
+    "old": "m?(0,y.jsxs)(\"div\",{className:\"feedback \"+(Gn?.correct?\"correct\":\"incorrect\"),role:\"status\",children:[(0,y.jsx)(\"span\",{children:Gn?.correct?(0,y.jsx)(Cl,{size:19}):(0,y.jsx)(Ta,{size:19})}),(0,y.jsxs)(\"div\",{children:[v5Dual&&(0,y.jsx)(V5DualVerdict,{record:Gn}),v4Meaning&&(0,y.jsx)(V4MeaningVerdict,{correct:Gn?.correct,revealed:Gn?.revealed}),(0,y.jsx)(\"strong\",{children:Ae.word}),(v4Meaning||v5Dual)&&(0,y.jsx)(\"div\",{className:\"v4-reference-label\",children:\"参考释义\"}),Ae.meaning&&(0,y.jsx)(\"p\",{children:Ae.meaning}),v5Dual&&(0,y.jsx)(V5DualAnswers,{record:Gn,compact:true}),!v5Dual&&!Gn?.correct&&(0,y.jsxs)(\"p\",{children:[\"\\u4F60\\u7684\\u7B54\\u6848\\uFF1A\",Gn?.answer]}),(0,y.jsxs)(\"div\",{className:\"feedback-audio\",children:[(0,y.jsxs)(me,{variant:\"outline\",type:\"button\",onClick:()=>Dg(),children:[(0,y.jsx)(lo,{size:16}),\"\\u542C\\u82F1\\u6587\\u53D1\\u97F3\"]}),(0,y.jsx)(me,{variant:\"ghost\",type:\"button\",onClick:()=>Dg(!0),children:\"\\u6162\\u901F\\u82F1\\u6587\"})]}),(0,y.jsx)(qR,{word:Ae.word,audioRef:oe,stopDevice:N.externalStart,stopAll:re,onPlaying:N.externalPlaying,onStopped:N.externalEnd},u)]})]})",
+    "new": "m?(l.rewriteWrong&&!Gn?.correct?null:(0,y.jsx)(V61Reference,{word:Ae,record:Gn,cue:l.cue,onSpeak:()=>Dg(),onSlow:()=>Dg(!0),dictionary:(0,y.jsx)(qR,{word:Ae.word,audioRef:oe,stopDevice:N.externalStart,stopAll:re,onPlaying:N.externalPlaying,onStopped:N.externalEnd},u)}))"
+  },
+  {
+    "name": "integrated correction with shared reference",
+    "old": "(0,y.jsx)(V6RewriteAnswers,{word:Ae,parts:v6RewriteParts(l.cue,Gn),onComplete:()=>v3SetRewritten(true)},u)",
+    "new": "(0,y.jsx)(V61RewriteAnswers,{word:Ae,parts:v6RewriteParts(l.cue,Gn),reference:(0,y.jsx)(V61Reference,{word:Ae,record:Gn,cue:l.cue,correcting:!v3Rewritten,onSpeak:()=>Dg(),onSlow:()=>Dg(!0),dictionary:(0,y.jsx)(qR,{word:Ae.word,audioRef:oe,stopDevice:N.externalStart,stopAll:re,onPlaying:N.externalPlaying,onStopped:N.externalEnd},u)}),onComplete:()=>v3SetRewritten(true)},u)"
+  },
+  {
+    "name": "explain locked next action",
+    "old": "m?(0,y.jsx)(me,{ref:U,className:\"answer-submit\",type:\"button\",disabled:v3Pending,",
+    "new": "v3Pending&&(0,y.jsx)(\"p\",{id:\"v61-next-description\",className:\"v61-pending-note\",children:\"完成上方重写后，就可以继续。\"}),m?(0,y.jsx)(me,{ref:U,className:\"answer-submit\",type:\"button\",\"aria-describedby\":v3Pending?\"v61-next-description\":void 0,disabled:v3Pending,"
+  }
+]
